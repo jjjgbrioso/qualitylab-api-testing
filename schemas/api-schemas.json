@@ -1,0 +1,1814 @@
+{
+  "User_one": {
+    "type": "object",
+    "required": [
+      "data"
+    ],
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "CUSTOMER",
+              "ADMIN"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DISABLED"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "firstName",
+          "lastName",
+          "role",
+          "status",
+          "createdAt"
+        ]
+      }
+    }
+  },
+  "LoginResult_one": {
+    "type": "object",
+    "required": [
+      "data"
+    ],
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "tokenType": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer"
+          },
+          "module": {
+            "type": "string",
+            "enum": [
+              "ecommerce",
+              "banking",
+              "travel",
+              "admin"
+            ]
+          },
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "firstName": {
+                "type": "string"
+              },
+              "lastName": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "CUSTOMER",
+                  "ADMIN"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ACTIVE",
+                  "DISABLED"
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "firstName",
+              "lastName",
+              "role",
+              "status",
+              "createdAt"
+            ]
+          }
+        },
+        "required": [
+          "token",
+          "tokenType",
+          "expiresIn",
+          "module",
+          "user"
+        ]
+      }
+    }
+  },
+  "Product_one": {
+    "type": "object",
+    "required": [
+      "data"
+    ],
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "priceCents": {
+            "type": "integer"
+          },
+          "listPriceCents": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "onSale": {
+            "type": "boolean"
+          },
+          "discountPercent": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "stock": {
+            "type": "integer"
+          },
+          "inStock": {
+            "type": "boolean"
+          },
+          "rating": {
+            "type": "number"
+          },
+          "imageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "sku",
+          "name",
+          "description",
+          "category",
+          "brand",
+          "priceCents",
+          "listPriceCents",
+          "onSale",
+          "discountPercent",
+          "stock",
+          "inStock",
+          "rating",
+          "imageUrl",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ]
+      }
+    }
+  },
+  "Product_page": {
+    "type": "object",
+    "required": [
+      "data",
+      "meta"
+    ],
+    "properties": {
+      "data": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "sku": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "category": {
+              "type": "string"
+            },
+            "brand": {
+              "type": "string"
+            },
+            "priceCents": {
+              "type": "integer"
+            },
+            "listPriceCents": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "onSale": {
+              "type": "boolean"
+            },
+            "discountPercent": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "stock": {
+              "type": "integer"
+            },
+            "inStock": {
+              "type": "boolean"
+            },
+            "rating": {
+              "type": "number"
+            },
+            "imageUrl": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "isActive": {
+              "type": "boolean"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "id",
+            "sku",
+            "name",
+            "description",
+            "category",
+            "brand",
+            "priceCents",
+            "listPriceCents",
+            "onSale",
+            "discountPercent",
+            "stock",
+            "inStock",
+            "rating",
+            "imageUrl",
+            "isActive",
+            "createdAt",
+            "updatedAt"
+          ]
+        }
+      },
+      "meta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "totalItems": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          },
+          "hasNext": {
+            "type": "boolean"
+          },
+          "hasPrevious": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "page",
+          "pageSize",
+          "totalItems",
+          "totalPages",
+          "hasNext",
+          "hasPrevious"
+        ]
+      }
+    }
+  },
+  "Cart_one": {
+    "type": "object",
+    "required": [
+      "data"
+    ],
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "productId": {
+                  "type": "string"
+                },
+                "sku": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "unitPriceCents": {
+                  "type": "integer"
+                },
+                "quantity": {
+                  "type": "integer"
+                },
+                "lineTotalCents": {
+                  "type": "integer"
+                },
+                "availableStock": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "productId",
+                "sku",
+                "name",
+                "unitPriceCents",
+                "quantity",
+                "lineTotalCents",
+                "availableStock"
+              ]
+            }
+          },
+          "itemCount": {
+            "type": "integer"
+          },
+          "subtotalCents": {
+            "type": "integer"
+          },
+          "taxCents": {
+            "type": "integer"
+          },
+          "shippingCents": {
+            "type": "integer"
+          },
+          "totalCents": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "itemCount",
+          "subtotalCents",
+          "taxCents",
+          "shippingCents",
+          "totalCents"
+        ]
+      }
+    }
+  },
+  "Order_one": {
+    "type": "object",
+    "required": [
+      "data"
+    ],
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "orderNumber": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PAID",
+              "SHIPPED",
+              "DELIVERED",
+              "CANCELLED"
+            ]
+          },
+          "paymentStatus": {
+            "type": "string",
+            "enum": [
+              "CAPTURED",
+              "REFUNDED"
+            ]
+          },
+          "subtotalCents": {
+            "type": "integer"
+          },
+          "taxCents": {
+            "type": "integer"
+          },
+          "shippingCents": {
+            "type": "integer"
+          },
+          "totalCents": {
+            "type": "integer"
+          },
+          "shipping": {
+            "type": "object",
+            "properties": {
+              "fullName": {
+                "type": "string"
+              },
+              "address": {
+                "type": "string"
+              },
+              "city": {
+                "type": "string"
+              },
+              "postcode": {
+                "type": "string"
+              },
+              "country": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "fullName",
+              "address",
+              "city",
+              "postcode",
+              "country"
+            ]
+          },
+          "payment": {
+            "type": "object",
+            "properties": {
+              "cardBrand": {
+                "type": "string"
+              },
+              "cardLast4": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "cardBrand",
+              "cardLast4"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "productId": {
+                  "type": "string"
+                },
+                "sku": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "unitPriceCents": {
+                  "type": "integer"
+                },
+                "quantity": {
+                  "type": "integer"
+                },
+                "lineTotalCents": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "productId",
+                "sku",
+                "name",
+                "unitPriceCents",
+                "quantity",
+                "lineTotalCents"
+              ]
+            }
+          },
+          "canCancel": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancelledAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "orderNumber",
+          "userId",
+          "status",
+          "paymentStatus",
+          "subtotalCents",
+          "taxCents",
+          "shippingCents",
+          "totalCents",
+          "shipping",
+          "payment",
+          "items",
+          "canCancel",
+          "createdAt",
+          "cancelledAt"
+        ]
+      }
+    }
+  },
+  "Order_page": {
+    "type": "object",
+    "required": [
+      "data",
+      "meta"
+    ],
+    "properties": {
+      "data": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "orderNumber": {
+              "type": "string"
+            },
+            "userId": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "PAID",
+                "SHIPPED",
+                "DELIVERED",
+                "CANCELLED"
+              ]
+            },
+            "paymentStatus": {
+              "type": "string",
+              "enum": [
+                "CAPTURED",
+                "REFUNDED"
+              ]
+            },
+            "subtotalCents": {
+              "type": "integer"
+            },
+            "taxCents": {
+              "type": "integer"
+            },
+            "shippingCents": {
+              "type": "integer"
+            },
+            "totalCents": {
+              "type": "integer"
+            },
+            "shipping": {
+              "type": "object",
+              "properties": {
+                "fullName": {
+                  "type": "string"
+                },
+                "address": {
+                  "type": "string"
+                },
+                "city": {
+                  "type": "string"
+                },
+                "postcode": {
+                  "type": "string"
+                },
+                "country": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fullName",
+                "address",
+                "city",
+                "postcode",
+                "country"
+              ]
+            },
+            "payment": {
+              "type": "object",
+              "properties": {
+                "cardBrand": {
+                  "type": "string"
+                },
+                "cardLast4": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "cardBrand",
+                "cardLast4"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "productId": {
+                    "type": "string"
+                  },
+                  "sku": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "unitPriceCents": {
+                    "type": "integer"
+                  },
+                  "quantity": {
+                    "type": "integer"
+                  },
+                  "lineTotalCents": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "productId",
+                  "sku",
+                  "name",
+                  "unitPriceCents",
+                  "quantity",
+                  "lineTotalCents"
+                ]
+              }
+            },
+            "canCancel": {
+              "type": "boolean"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "cancelledAt": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "id",
+            "orderNumber",
+            "userId",
+            "status",
+            "paymentStatus",
+            "subtotalCents",
+            "taxCents",
+            "shippingCents",
+            "totalCents",
+            "shipping",
+            "payment",
+            "items",
+            "canCancel",
+            "createdAt",
+            "cancelledAt"
+          ]
+        }
+      },
+      "meta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "totalItems": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          },
+          "hasNext": {
+            "type": "boolean"
+          },
+          "hasPrevious": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "page",
+          "pageSize",
+          "totalItems",
+          "totalPages",
+          "hasNext",
+          "hasPrevious"
+        ]
+      }
+    }
+  },
+  "BankAccount_one": {
+    "type": "object",
+    "required": [
+      "data"
+    ],
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "accountNumber": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CHECKING",
+              "SAVINGS",
+              "TIME_DEPOSIT"
+            ]
+          },
+          "product": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "STARTER_SAVINGS",
+              "EVERYDAY_CHECKING",
+              "TIME_DEPOSIT",
+              null
+            ]
+          },
+          "productName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "FROZEN"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "balanceCents": {
+            "type": "integer"
+          },
+          "termMonths": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "interestRateBps": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "maturityDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "locked": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "accountNumber",
+          "name",
+          "type",
+          "product",
+          "productName",
+          "status",
+          "currency",
+          "balanceCents",
+          "termMonths",
+          "interestRateBps",
+          "maturityDate",
+          "locked",
+          "createdAt"
+        ]
+      }
+    }
+  },
+  "BankAccount_list": {
+    "type": "object",
+    "required": [
+      "data"
+    ],
+    "properties": {
+      "data": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "accountNumber": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "CHECKING",
+                "SAVINGS",
+                "TIME_DEPOSIT"
+              ]
+            },
+            "product": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "STARTER_SAVINGS",
+                "EVERYDAY_CHECKING",
+                "TIME_DEPOSIT",
+                null
+              ]
+            },
+            "productName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "FROZEN"
+              ]
+            },
+            "currency": {
+              "type": "string"
+            },
+            "balanceCents": {
+              "type": "integer"
+            },
+            "termMonths": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "interestRateBps": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "maturityDate": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date"
+            },
+            "locked": {
+              "type": "boolean"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "id",
+            "accountNumber",
+            "name",
+            "type",
+            "product",
+            "productName",
+            "status",
+            "currency",
+            "balanceCents",
+            "termMonths",
+            "interestRateBps",
+            "maturityDate",
+            "locked",
+            "createdAt"
+          ]
+        }
+      }
+    }
+  },
+  "BankTransaction_one": {
+    "type": "object",
+    "required": [
+      "data"
+    ],
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "DEPOSIT",
+              "WITHDRAWAL",
+              "TRANSFER_IN",
+              "TRANSFER_OUT",
+              "LOAN_DISBURSEMENT",
+              "LOAN_PAYMENT"
+            ]
+          },
+          "amountCents": {
+            "type": "integer"
+          },
+          "balanceAfterCents": {
+            "type": "integer"
+          },
+          "counterparty": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "reference",
+          "accountId",
+          "type",
+          "amountCents",
+          "balanceAfterCents",
+          "counterparty",
+          "description",
+          "createdAt"
+        ]
+      }
+    }
+  },
+  "BankTransaction_page": {
+    "type": "object",
+    "required": [
+      "data",
+      "meta"
+    ],
+    "properties": {
+      "data": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "reference": {
+              "type": "string"
+            },
+            "accountId": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "DEPOSIT",
+                "WITHDRAWAL",
+                "TRANSFER_IN",
+                "TRANSFER_OUT",
+                "LOAN_DISBURSEMENT",
+                "LOAN_PAYMENT"
+              ]
+            },
+            "amountCents": {
+              "type": "integer"
+            },
+            "balanceAfterCents": {
+              "type": "integer"
+            },
+            "counterparty": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "description": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "id",
+            "reference",
+            "accountId",
+            "type",
+            "amountCents",
+            "balanceAfterCents",
+            "counterparty",
+            "description",
+            "createdAt"
+          ]
+        }
+      },
+      "meta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "totalItems": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          },
+          "hasNext": {
+            "type": "boolean"
+          },
+          "hasPrevious": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "page",
+          "pageSize",
+          "totalItems",
+          "totalPages",
+          "hasNext",
+          "hasPrevious"
+        ]
+      }
+    }
+  },
+  "HotelSummary_page": {
+    "type": "object",
+    "required": [
+      "data",
+      "meta"
+    ],
+    "properties": {
+      "data": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "city": {
+              "type": "string"
+            },
+            "country": {
+              "type": "string"
+            },
+            "address": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "starRating": {
+              "type": "integer"
+            },
+            "amenities": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "imageUrl": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "fromPriceCents": {
+              "type": "integer"
+            },
+            "matchingRooms": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "city",
+            "country",
+            "address",
+            "description",
+            "starRating",
+            "amenities",
+            "imageUrl",
+            "fromPriceCents",
+            "matchingRooms"
+          ]
+        }
+      },
+      "meta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "totalItems": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          },
+          "hasNext": {
+            "type": "boolean"
+          },
+          "hasPrevious": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "page",
+          "pageSize",
+          "totalItems",
+          "totalPages",
+          "hasNext",
+          "hasPrevious"
+        ]
+      }
+    }
+  },
+  "HotelDetail_one": {
+    "type": "object",
+    "required": [
+      "data"
+    ],
+    "properties": {
+      "data": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "city": {
+                "type": "string"
+              },
+              "country": {
+                "type": "string"
+              },
+              "address": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "starRating": {
+                "type": "integer"
+              },
+              "amenities": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "imageUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fromPriceCents": {
+                "type": "integer"
+              },
+              "matchingRooms": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "city",
+              "country",
+              "address",
+              "description",
+              "starRating",
+              "amenities",
+              "imageUrl"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "rooms": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "hotelId": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "STANDARD",
+                        "DELUXE",
+                        "SUITE",
+                        "FAMILY"
+                      ]
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "maxGuests": {
+                      "type": "integer"
+                    },
+                    "pricePerNightCents": {
+                      "type": "integer"
+                    },
+                    "totalRooms": {
+                      "type": "integer"
+                    },
+                    "availableRooms": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "available": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "nights": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "stayTotalCents": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "hotelId",
+                    "name",
+                    "type",
+                    "description",
+                    "maxGuests",
+                    "pricePerNightCents",
+                    "totalRooms",
+                    "availableRooms",
+                    "available",
+                    "nights",
+                    "stayTotalCents"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "rooms"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "Room_one": {
+    "type": "object",
+    "required": [
+      "data"
+    ],
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "hotelId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "STANDARD",
+              "DELUXE",
+              "SUITE",
+              "FAMILY"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "maxGuests": {
+            "type": "integer"
+          },
+          "pricePerNightCents": {
+            "type": "integer"
+          },
+          "totalRooms": {
+            "type": "integer"
+          },
+          "availableRooms": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "available": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "nights": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "stayTotalCents": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "hotelId",
+          "name",
+          "type",
+          "description",
+          "maxGuests",
+          "pricePerNightCents",
+          "totalRooms",
+          "availableRooms",
+          "available",
+          "nights",
+          "stayTotalCents"
+        ]
+      }
+    }
+  },
+  "Booking_one": {
+    "type": "object",
+    "required": [
+      "data"
+    ],
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "bookingNumber": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CONFIRMED",
+              "CANCELLED"
+            ]
+          },
+          "checkIn": {
+            "type": "string",
+            "format": "date"
+          },
+          "checkOut": {
+            "type": "string",
+            "format": "date"
+          },
+          "guests": {
+            "type": "integer"
+          },
+          "nights": {
+            "type": "integer"
+          },
+          "totalCents": {
+            "type": "integer"
+          },
+          "room": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "pricePerNightCents": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "type",
+              "pricePerNightCents"
+            ]
+          },
+          "hotel": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "city": {
+                "type": "string"
+              },
+              "country": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "city",
+              "country"
+            ]
+          },
+          "canCancel": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancelledAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "bookingNumber",
+          "userId",
+          "status",
+          "checkIn",
+          "checkOut",
+          "guests",
+          "nights",
+          "totalCents",
+          "room",
+          "hotel",
+          "canCancel",
+          "createdAt",
+          "cancelledAt"
+        ]
+      }
+    }
+  },
+  "Booking_page": {
+    "type": "object",
+    "required": [
+      "data",
+      "meta"
+    ],
+    "properties": {
+      "data": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "bookingNumber": {
+              "type": "string"
+            },
+            "userId": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "CONFIRMED",
+                "CANCELLED"
+              ]
+            },
+            "checkIn": {
+              "type": "string",
+              "format": "date"
+            },
+            "checkOut": {
+              "type": "string",
+              "format": "date"
+            },
+            "guests": {
+              "type": "integer"
+            },
+            "nights": {
+              "type": "integer"
+            },
+            "totalCents": {
+              "type": "integer"
+            },
+            "room": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "pricePerNightCents": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "type",
+                "pricePerNightCents"
+              ]
+            },
+            "hotel": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "city": {
+                  "type": "string"
+                },
+                "country": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "city",
+                "country"
+              ]
+            },
+            "canCancel": {
+              "type": "boolean"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "cancelledAt": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "id",
+            "bookingNumber",
+            "userId",
+            "status",
+            "checkIn",
+            "checkOut",
+            "guests",
+            "nights",
+            "totalCents",
+            "room",
+            "hotel",
+            "canCancel",
+            "createdAt",
+            "cancelledAt"
+          ]
+        }
+      },
+      "meta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "totalItems": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          },
+          "hasNext": {
+            "type": "boolean"
+          },
+          "hasPrevious": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "page",
+          "pageSize",
+          "totalItems",
+          "totalPages",
+          "hasNext",
+          "hasPrevious"
+        ]
+      }
+    }
+  },
+  "ErrorResponse": {
+    "type": "object",
+    "required": [
+      "error"
+    ],
+    "properties": {
+      "error": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "requestId"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message"
+              ]
+            }
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    }
+  }
+}

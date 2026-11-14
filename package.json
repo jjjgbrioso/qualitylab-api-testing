@@ -1,0 +1,24 @@
+{
+  "name": "qualitylab-api-testing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Postman collections and Newman runs for the QualityLab REST API.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.12"
+  },
+  "scripts": {
+    "test": "node scripts/run.js",
+    "test:auth": "node scripts/run.js auth",
+    "test:ecommerce": "node scripts/run.js ecommerce",
+    "test:banking": "node scripts/run.js banking",
+    "test:travel": "node scripts/run.js travel",
+    "test:local": "node scripts/run.js --env local",
+    "schemas": "node scripts/build-schemas.js",
+    "report": "node scripts/run.js --open-report"
+  },
+  "devDependencies": {
+    "newman": "6.2.3",
+    "newman-reporter-htmlextra": "1.23.1"
+  }
+}

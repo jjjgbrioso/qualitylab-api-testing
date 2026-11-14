@@ -1,0 +1,103 @@
+[
+  {
+    "case": "wrong password",
+    "email": "<test user>",
+    "password": "Wrong-Password-1!",
+    "module": "ecommerce",
+    "expectedStatus": 401,
+    "expectedCode": "INVALID_CREDENTIALS",
+    "expectedMessage": "The email or password is incorrect."
+  },
+  {
+    "case": "unknown email gets the same message",
+    "email": "nobody.here@qualitylab.test",
+    "password": "Some-Password-1!",
+    "module": "banking",
+    "expectedStatus": 401,
+    "expectedCode": "INVALID_CREDENTIALS",
+    "expectedMessage": "The email or password is incorrect."
+  },
+  {
+    "case": "disabled account",
+    "email": "disabled@qualitylab.test",
+    "password": "<test password>",
+    "module": "travel",
+    "expectedStatus": 403,
+    "expectedCode": "ACCOUNT_DISABLED",
+    "expectedMessage": "This account has been disabled."
+  },
+  {
+    "case": "customer asks for the Admin module",
+    "email": "<test user>",
+    "password": "<test password>",
+    "module": "admin",
+    "expectedStatus": 403,
+    "expectedCode": "MODULE_NOT_ALLOWED"
+  },
+  {
+    "case": "module missing",
+    "email": "<test user>",
+    "password": "<test password>",
+    "module": null,
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "module"
+  },
+  {
+    "case": "unknown module",
+    "email": "<test user>",
+    "password": "<test password>",
+    "module": "shopping",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "module"
+  },
+  {
+    "case": "email not an email address",
+    "email": "not-an-email",
+    "password": "Some-Password-1!",
+    "module": "banking",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "email",
+    "expectedMessage": "Enter a valid email address."
+  },
+  {
+    "case": "email empty",
+    "email": "",
+    "password": "Some-Password-1!",
+    "module": "banking",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "email"
+  },
+  {
+    "case": "password missing",
+    "email": "<test user>",
+    "password": null,
+    "module": "banking",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "password",
+    "expectedMessage": "Password is required."
+  },
+  {
+    "case": "password empty",
+    "email": "<test user>",
+    "password": "",
+    "module": "banking",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "password",
+    "expectedMessage": "Password is required."
+  },
+  {
+    "case": "SQL-like text as the email",
+    "email": "' OR '1'='1",
+    "password": "x",
+    "module": "banking",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "email"
+  }
+]

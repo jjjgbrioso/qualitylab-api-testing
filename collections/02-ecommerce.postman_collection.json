@@ -1,0 +1,4095 @@
+{
+	"info": {
+		"_postman_id": "d59fce20-08f0-53bb-a095-c939fa1680fa",
+		"name": "02 - QualityLab E-commerce",
+		"description": "Product listing and details, admin product management and inventory, cart, checkout and orders.\n\nThe admin tests work on a throwaway product created by \"Create a product\", so real stock is never changed.\nThe cart is emptied first and the test order is cancelled at the end.\nDo not run this at the same time as the Selenium or Playwright suites: they use the same customer's cart.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Product listing",
+			"description": "Public endpoints: listing, search, filters and sorting.",
+			"item": [
+				{
+					"name": "Products - first page with defaults",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response matches the Product page schema', () => {",
+									"  const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+									"  pm.response.to.have.jsonSchema(schemas.Product_page);",
+									"});",
+									"",
+									"const { data: products, meta } = pm.response.json();",
+									"",
+									"pm.test('Default paging: page 1, 12 per page', () => {",
+									"  pm.expect(meta.page).to.eql(1);",
+									"  pm.expect(meta.pageSize).to.eql(12);",
+									"  pm.expect(products.length).to.be.at.most(12);",
+									"});",
+									"",
+									"pm.test('Sorted by name, A to Z', () => {",
+									"  const names = products.map((product) => product.name);",
+									"  pm.expect(names).to.eql([...names].sort((a, b) => a.localeCompare(b)));",
+									"});",
+									"",
+									"pm.test('Only active products are listed', () => {",
+									"  pm.expect(products.every((product) => product.isActive)).to.eql(true);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							]
+						},
+						"description": "Public endpoint. Expected: 200 OK, a page of products (12 by default) sorted by name, with paging meta."
+					},
+					"response": []
+				},
+				{
+					"name": "Products - search by keyword",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const { data: products, meta } = pm.response.json();",
+									"",
+									"pm.test('The keyboard is found', () => {",
+									"  pm.expect(products.map((product) => product.id)).to.include('prod_0003');",
+									"});",
+									"",
+									"pm.test('The total matches the results', () => {",
+									"  pm.expect(meta.totalItems).to.eql(products.length);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products?q=keyboard",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "keyboard"
+								}
+							]
+						},
+						"description": "Expected: 200 OK and the Vector Mechanical Keyboard (prod_0003) in the results."
+					},
+					"response": []
+				},
+				{
+					"name": "Products - filter by category",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const { data: products } = pm.response.json();",
+									"",
+									"pm.test('Status is 200 OK and books are found', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(products.length).to.be.above(0);",
+									"});",
+									"",
+									"pm.test('Every product is in Books', () => {",
+									"  pm.expect(products.every((product) => product.category === 'Books')).to.eql(true);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products?category=Books&pageSize=100",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							],
+							"query": [
+								{
+									"key": "category",
+									"value": "Books"
+								},
+								{
+									"key": "pageSize",
+									"value": "100"
+								}
+							]
+						},
+						"description": "Expected: only products in the Books category."
+					},
+					"response": []
+				},
+				{
+					"name": "Products - filter by price range",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const { data: products } = pm.response.json();",
+									"",
+									"pm.test('Status is 200 OK and products are found', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(products.length).to.be.above(0);",
+									"});",
+									"",
+									"pm.test('Every price is inside the range', () => {",
+									"  for (const product of products) {",
+									"    pm.expect(product.priceCents, product.name).to.be.within(2000, 4000);",
+									"  }",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products?minPrice=20&maxPrice=40&pageSize=100",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							],
+							"query": [
+								{
+									"key": "minPrice",
+									"value": "20"
+								},
+								{
+									"key": "maxPrice",
+									"value": "40"
+								},
+								{
+									"key": "pageSize",
+									"value": "100"
+								}
+							]
+						},
+						"description": "Prices are in dollars in the query. Expected: every price from $20.00 to $40.00 (2000 to 4000 cents)."
+					},
+					"response": []
+				},
+				{
+					"name": "Products - in stock and on sale",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const { data: products } = pm.response.json();",
+									"",
+									"pm.test('Status is 200 OK and products are found', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(products.length).to.be.above(0);",
+									"});",
+									"",
+									"pm.test('Every product is in stock and on sale', () => {",
+									"  for (const product of products) {",
+									"    pm.expect(product.inStock, product.name).to.eql(true);",
+									"    pm.expect(product.onSale, product.name).to.eql(true);",
+									"    pm.expect(product.listPriceCents, product.name).to.be.above(product.priceCents);",
+									"  }",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products?inStock=true&onSale=true&pageSize=100",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							],
+							"query": [
+								{
+									"key": "inStock",
+									"value": "true"
+								},
+								{
+									"key": "onSale",
+									"value": "true"
+								},
+								{
+									"key": "pageSize",
+									"value": "100"
+								}
+							]
+						},
+						"description": "Expected: every product has stock and a sale price below its original price."
+					},
+					"response": []
+				},
+				{
+					"name": "Products - sort by price, low to high",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const { data: products, meta } = pm.response.json();",
+									"",
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Prices go up', () => {",
+									"  const prices = products.map((product) => product.priceCents);",
+									"  pm.expect(prices).to.eql([...prices].sort((a, b) => a - b));",
+									"});",
+									"",
+									"pm.test('All products fit on one page of 100', () => {",
+									"  pm.expect(meta.totalItems).to.eql(products.length);",
+									"  pm.expect(meta.hasNext).to.eql(false);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products?sort=price_asc&pageSize=100",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							],
+							"query": [
+								{
+									"key": "sort",
+									"value": "price_asc"
+								},
+								{
+									"key": "pageSize",
+									"value": "100"
+								}
+							]
+						},
+						"description": "Expected: prices in ascending order, all products on one page."
+					},
+					"response": []
+				},
+				{
+					"name": "Products - sort by price, high to low",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Prices go down', () => {",
+									"  const prices = pm.response.json().data.map((product) => product.priceCents);",
+									"  pm.expect(prices).to.eql([...prices].sort((a, b) => b - a));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products?sort=price_desc&pageSize=100",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							],
+							"query": [
+								{
+									"key": "sort",
+									"value": "price_desc"
+								},
+								{
+									"key": "pageSize",
+									"value": "100"
+								}
+							]
+						},
+						"description": "Expected: prices in descending order."
+					},
+					"response": []
+				},
+				{
+					"name": "Product categories",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const categories = pm.response.json().data;",
+									"",
+									"pm.test('A list of distinct names, including Books', () => {",
+									"  pm.expect(categories).to.be.an('array').that.includes('Books');",
+									"  pm.expect(new Set(categories).size).to.eql(categories.length);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products/categories",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products",
+								"categories"
+							]
+						},
+						"description": "Expected: 200 OK, a list of distinct category names including Books."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Product listing - limits and invalid queries",
+			"description": "Boundary and negative tests for the listing query.",
+			"item": [
+				{
+					"name": "Page size 100 is accepted (maximum)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK with pageSize 100', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().meta.pageSize).to.eql(100);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products?pageSize=100",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							],
+							"query": [
+								{
+									"key": "pageSize",
+									"value": "100"
+								}
+							]
+						},
+						"description": "Boundary test. Expected: 200 OK and meta.pageSize 100."
+					},
+					"response": []
+				},
+				{
+					"name": "Page size 101 is refused (above the maximum)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on pageSize: \"Page size must be at most 100.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'pageSize');",
+									"  pm.expect(detail, 'a field error for pageSize').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Page size must be at most 100.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products?pageSize=101",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							],
+							"query": [
+								{
+									"key": "pageSize",
+									"value": "101"
+								}
+							]
+						},
+						"description": "Boundary test. Expected: 400, \"Page size must be at most 100.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Page size 0 is refused (below the minimum)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on pageSize: \"Page size must be at least 1.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'pageSize');",
+									"  pm.expect(detail, 'a field error for pageSize').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Page size must be at least 1.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products?pageSize=0",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							],
+							"query": [
+								{
+									"key": "pageSize",
+									"value": "0"
+								}
+							]
+						},
+						"description": "Boundary test. Expected: 400, \"Page size must be at least 1.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Page 0 is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on page: \"Page must be at least 1.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'page');",
+									"  pm.expect(detail, 'a field error for page').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Page must be at least 1.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products?page=0",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								}
+							]
+						},
+						"description": "Boundary test. Expected: 400, \"Page must be at least 1.\""
+					},
+					"response": []
+				},
+				{
+					"name": "A page after the last one is empty",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK with no products', () => {",
+									"  pm.response.to.have.status(200);",
+									"  const { data: products, meta } = pm.response.json();",
+									"  pm.expect(products).to.have.lengthOf(0);",
+									"  pm.expect(meta.hasNext).to.eql(false);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products?page=999",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "999"
+								}
+							]
+						},
+						"description": "Expected: 200 OK, no products, hasNext false."
+					},
+					"response": []
+				},
+				{
+					"name": "An unknown sort order is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on sort: \"Choose a supported sort order.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'sort');",
+									"  pm.expect(detail, 'a field error for sort').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Choose a supported sort order.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products?sort=cheapest",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							],
+							"query": [
+								{
+									"key": "sort",
+									"value": "cheapest"
+								}
+							]
+						},
+						"description": "Expected: 400, \"Choose a supported sort order.\""
+					},
+					"response": []
+				},
+				{
+					"name": "A maximum price below the minimum is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on maxPrice: \"Maximum price must not be below the minimum price.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'maxPrice');",
+									"  pm.expect(detail, 'a field error for maxPrice').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Maximum price must not be below the minimum price.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products?minPrice=50&maxPrice=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							],
+							"query": [
+								{
+									"key": "minPrice",
+									"value": "50"
+								},
+								{
+									"key": "maxPrice",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Expected: 400 on maxPrice."
+					},
+					"response": []
+				},
+				{
+					"name": "A negative minimum price is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on minPrice: \"Minimum price cannot be negative.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'minPrice');",
+									"  pm.expect(detail, 'a field error for minPrice').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Minimum price cannot be negative.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products?minPrice=-1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							],
+							"query": [
+								{
+									"key": "minPrice",
+									"value": "-1"
+								}
+							]
+						},
+						"description": "Boundary test. Expected: 400, \"Minimum price cannot be negative.\""
+					},
+					"response": []
+				},
+				{
+					"name": "In stock must be true or false",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on inStock: \"In stock must be true or false.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'inStock');",
+									"  pm.expect(detail, 'a field error for inStock').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"In stock must be true or false.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products?inStock=maybe",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							],
+							"query": [
+								{
+									"key": "inStock",
+									"value": "maybe"
+								}
+							]
+						},
+						"description": "Expected: 400, \"In stock must be true or false.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Search text longer than 100 characters is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on q: \"Search text must be at most 100 characters.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'q');",
+									"  pm.expect(detail, 'a field error for q').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Search text must be at most 100 characters.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products?q=kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+								}
+							]
+						},
+						"description": "Boundary test with 101 characters. Expected: 400."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Product details",
+			"description": "One product by id.",
+			"item": [
+				{
+					"name": "Product details - a product on sale",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response matches the Product schema', () => {",
+									"  const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+									"  pm.response.to.have.jsonSchema(schemas.Product_one);",
+									"});",
+									"",
+									"const product = pm.response.json().data;",
+									"",
+									"pm.test('It is the requested product', () => {",
+									"  pm.expect(product.id).to.eql('prod_0009');",
+									"});",
+									"",
+									"pm.test('Sale prices are consistent', () => {",
+									"  pm.expect(product.onSale).to.eql(true);",
+									"  pm.expect(product.listPriceCents).to.be.above(product.priceCents);",
+									"  pm.expect(product.discountPercent).to.be.within(1, 99);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products/prod_0009",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products",
+								"prod_0009"
+							]
+						},
+						"description": "Expected: 200 OK, a Product, on sale with an original price above the price."
+					},
+					"response": []
+				},
+				{
+					"name": "Product details - an unknown product",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', () => {",
+									"  pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test('Error code is PRODUCT_NOT_FOUND', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('PRODUCT_NOT_FOUND');",
+									"  pm.expect(error.message).to.eql(\"Product not found.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products/prod_9999",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products",
+								"prod_9999"
+							]
+						},
+						"description": "Expected: 404 Not Found, PRODUCT_NOT_FOUND."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin - product management",
+			"description": "Create, read and update a throwaway product. Needs the admin credentials.",
+			"item": [
+				{
+					"name": "Create a product",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// SKUs are 3 to 32 capital letters, digits or hyphens.",
+									"pm.collectionVariables.set('productSku', `NWM-${Date.now().toString(36).toUpperCase()}`);"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201 Created', () => {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response matches the Product schema', () => {",
+									"  const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+									"  pm.response.to.have.jsonSchema(schemas.Product_one);",
+									"});",
+									"",
+									"const product = pm.response.json().data;",
+									"pm.collectionVariables.set('createdProductId', product.id);",
+									"",
+									"pm.test('The product has the values that were sent', () => {",
+									"  pm.expect(product.sku).to.eql(pm.collectionVariables.get('productSku'));",
+									"  pm.expect(product.priceCents).to.eql(1999);",
+									"  pm.expect(product.stock).to.eql(10);",
+									"  pm.expect(product.category).to.eql('Office');",
+									"});",
+									"",
+									"pm.test('It is active and not on sale', () => {",
+									"  pm.expect(product.isActive).to.eql(true);",
+									"  pm.expect(product.onSale).to.eql(false);",
+									"  pm.expect(product.listPriceCents).to.eql(null);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"{{productSku}}\",\n  \"name\": \"Newman Test Product {{productSku}}\",\n  \"description\": \"Created by the Newman API tests and deactivated at the end of the run.\",\n  \"category\": \"Office\",\n  \"brand\": \"QualityLab\",\n  \"priceCents\": 1999,\n  \"stock\": 10\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Creates a throwaway product with a unique SKU. It is deactivated (deleted) at the end of this collection.\nExpected: 201 Created, a Product with the values sent, active, not on sale."
+					},
+					"response": []
+				},
+				{
+					"name": "Create - the same SKU again is refused (duplicate request)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 409', () => {",
+									"  pm.response.to.have.status(409);",
+									"});",
+									"",
+									"pm.test('Error code is SKU_ALREADY_EXISTS', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('SKU_ALREADY_EXISTS');",
+									"  pm.expect(error.message).to.eql(\"A product with this SKU already exists.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"{{productSku}}\",\n  \"name\": \"Newman Test Product {{productSku}}\",\n  \"description\": \"Created by the Newman API tests and deactivated at the end of the run.\",\n  \"category\": \"Office\",\n  \"brand\": \"QualityLab\",\n  \"priceCents\": 1999,\n  \"stock\": 10\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 409 Conflict, SKU_ALREADY_EXISTS."
+					},
+					"response": []
+				},
+				{
+					"name": "Create - required fields are checked",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('Every missing required field is reported', () => {",
+									"  const fields = pm.response.json().error.details.map((detail) => detail.field);",
+									"  for (const field of ['sku', 'description', 'category', 'brand', 'priceCents', 'stock']) {",
+									"    pm.expect(fields, field).to.include(field);",
+									"  }",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Only a name\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Sends only a name. Expected: 400 with a field error for each missing required field."
+					},
+					"response": []
+				},
+				{
+					"name": "Create - a price of 0 is refused (boundary)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on priceCents: \"Price must be greater than zero.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'priceCents');",
+									"  pm.expect(detail, 'a field error for priceCents').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Price must be greater than zero.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"{{productSku}}\",\n  \"name\": \"Newman Test Product {{productSku}}\",\n  \"description\": \"Created by the Newman API tests and deactivated at the end of the run.\",\n  \"category\": \"Office\",\n  \"brand\": \"QualityLab\",\n  \"priceCents\": 0,\n  \"stock\": 10\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 400, \"Price must be greater than zero.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Create - a price above $100,000.00 is refused (boundary)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on priceCents: \"Price must be at most $100,000.00.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'priceCents');",
+									"  pm.expect(detail, 'a field error for priceCents').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Price must be at most $100,000.00.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"{{productSku}}\",\n  \"name\": \"Newman Test Product {{productSku}}\",\n  \"description\": \"Created by the Newman API tests and deactivated at the end of the run.\",\n  \"category\": \"Office\",\n  \"brand\": \"QualityLab\",\n  \"priceCents\": 10000001,\n  \"stock\": 10\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "10,000,001 cents. Expected: 400, \"Price must be at most $100,000.00.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Create - negative stock is refused (boundary)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on stock: \"Stock cannot be negative.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'stock');",
+									"  pm.expect(detail, 'a field error for stock').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Stock cannot be negative.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"{{productSku}}\",\n  \"name\": \"Newman Test Product {{productSku}}\",\n  \"description\": \"Created by the Newman API tests and deactivated at the end of the run.\",\n  \"category\": \"Office\",\n  \"brand\": \"QualityLab\",\n  \"priceCents\": 1999,\n  \"stock\": -1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 400, \"Stock cannot be negative.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Create - an SKU with spaces or small letters is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on sku: \"SKU must be 3 to 32 capital letters, digits, or hyphens.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'sku');",
+									"  pm.expect(detail, 'a field error for sku').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"SKU must be 3 to 32 capital letters, digits, or hyphens.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"bad sku!\",\n  \"name\": \"Newman Test Product {{productSku}}\",\n  \"description\": \"Created by the Newman API tests and deactivated at the end of the run.\",\n  \"category\": \"Office\",\n  \"brand\": \"QualityLab\",\n  \"priceCents\": 1999,\n  \"stock\": 10\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 400 on sku."
+					},
+					"response": []
+				},
+				{
+					"name": "Create - a customer token is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 403', () => {",
+									"  pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.test('Error code is MODULE_NOT_ALLOWED', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('MODULE_NOT_ALLOWED');",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"{{productSku}}\",\n  \"name\": \"Newman Test Product {{productSku}}\",\n  \"description\": \"Created by the Newman API tests and deactivated at the end of the run.\",\n  \"category\": \"Office\",\n  \"brand\": \"QualityLab\",\n  \"priceCents\": 1999,\n  \"stock\": 10\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Authorization test. Expected: 403 Forbidden, MODULE_NOT_ALLOWED."
+					},
+					"response": []
+				},
+				{
+					"name": "Create - no token is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', () => {",
+									"  pm.response.to.have.status(401);",
+									"});",
+									"",
+									"pm.test('Error code is UNAUTHORIZED', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('UNAUTHORIZED');",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"{{productSku}}\",\n  \"name\": \"Newman Test Product {{productSku}}\",\n  \"description\": \"Created by the Newman API tests and deactivated at the end of the run.\",\n  \"category\": \"Office\",\n  \"brand\": \"QualityLab\",\n  \"priceCents\": 1999,\n  \"stock\": 10\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Authentication test. Expected: 401 Unauthorized."
+					},
+					"response": []
+				},
+				{
+					"name": "Read the new product (admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('It is the product created above', () => {",
+									"  pm.expect(pm.response.json().data.sku).to.eql(pm.collectionVariables.get('productSku'));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products/{{createdProductId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products",
+								"{{createdProductId}}"
+							]
+						},
+						"description": "Expected: 200 OK with the product just created."
+					},
+					"response": []
+				},
+				{
+					"name": "Update - change the name and price",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const product = pm.response.json().data;",
+									"",
+									"pm.test('Name and price changed', () => {",
+									"  pm.expect(product.name).to.include('(updated)');",
+									"  pm.expect(product.priceCents).to.eql(2499);",
+									"});",
+									"",
+									"pm.test('Fields that were not sent are unchanged', () => {",
+									"  pm.expect(product.stock).to.eql(10);",
+									"  pm.expect(product.category).to.eql('Office');",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products/{{createdProductId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products",
+								"{{createdProductId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Newman Test Product {{productSku}} (updated)\",\n  \"priceCents\": 2499\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Partial update. Expected: 200 OK, new name and price, other fields unchanged."
+					},
+					"response": []
+				},
+				{
+					"name": "Update - put it on sale",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('The product is now on sale', () => {",
+									"  const product = pm.response.json().data;",
+									"  pm.expect(product.onSale).to.eql(true);",
+									"  pm.expect(product.listPriceCents).to.eql(2999);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products/{{createdProductId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products",
+								"{{createdProductId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"listPriceCents\": 2999\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "An original price above the price puts the product on sale. Expected: 200 OK, onSale true."
+					},
+					"response": []
+				},
+				{
+					"name": "Update - an original price below the price is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', () => {",
+									"  pm.response.to.have.status(422);",
+									"});",
+									"",
+									"pm.test('Error code is INVALID_LIST_PRICE', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('INVALID_LIST_PRICE');",
+									"  pm.expect(error.message).to.eql(\"The original price must be higher than the selling price.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products/{{createdProductId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products",
+								"{{createdProductId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"listPriceCents\": 1000\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 422, INVALID_LIST_PRICE."
+					},
+					"response": []
+				},
+				{
+					"name": "Update - an empty update is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('The error explains that a field is needed', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  pm.expect(error.details.map((detail) => detail.message)).to.include('Provide at least one field to update.');",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products/{{createdProductId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products",
+								"{{createdProductId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 400, \"Provide at least one field to update.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Update - an unknown product",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', () => {",
+									"  pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test('Error code is PRODUCT_NOT_FOUND', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('PRODUCT_NOT_FOUND');",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products/prod_nope",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products",
+								"prod_nope"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Nothing\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 404, PRODUCT_NOT_FOUND."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin - inventory management",
+			"description": "Stock changes on the throwaway product.",
+			"item": [
+				{
+					"name": "Inventory - add 5 to stock",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and stock is 15', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.stock).to.eql(15);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products/{{createdProductId}}/inventory",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products",
+								"{{createdProductId}}",
+								"inventory"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"delta\": 5,\n  \"note\": \"Newman: add stock\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Stock starts at 10. Expected: 200 OK and stock 15."
+					},
+					"response": []
+				},
+				{
+					"name": "Inventory - remove 3 from stock",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and stock is 12', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.stock).to.eql(12);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products/{{createdProductId}}/inventory",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products",
+								"{{createdProductId}}",
+								"inventory"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"delta\": -3,\n  \"note\": \"Newman: remove stock\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 200 OK and stock 12."
+					},
+					"response": []
+				},
+				{
+					"name": "Inventory - a change of 0 is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on delta: \"Quantity change cannot be zero.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'delta');",
+									"  pm.expect(detail, 'a field error for delta').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Quantity change cannot be zero.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products/{{createdProductId}}/inventory",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products",
+								"{{createdProductId}}",
+								"inventory"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"delta\": 0\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 400, \"Quantity change cannot be zero.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Inventory - a decimal change is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on delta: \"Quantity change must be a whole number.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'delta');",
+									"  pm.expect(detail, 'a field error for delta').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Quantity change must be a whole number.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products/{{createdProductId}}/inventory",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products",
+								"{{createdProductId}}",
+								"inventory"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"delta\": 1.5\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 400, \"Quantity change must be a whole number.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Inventory - stock cannot go below zero (one too many)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', () => {",
+									"  pm.response.to.have.status(422);",
+									"});",
+									"",
+									"pm.test('Error code is INVALID_STOCK_ADJUSTMENT', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('INVALID_STOCK_ADJUSTMENT');",
+									"  pm.expect(error.message).to.eql(\"This change would make stock negative.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products/{{createdProductId}}/inventory",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products",
+								"{{createdProductId}}",
+								"inventory"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"delta\": -13\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Boundary test: stock is 12, remove 13. Expected: 422, INVALID_STOCK_ADJUSTMENT, stock unchanged."
+					},
+					"response": []
+				},
+				{
+					"name": "Inventory - remove all stock exactly (boundary)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Stock is 0 and the product is out of stock', () => {",
+									"  const product = pm.response.json().data;",
+									"  pm.expect(product.stock).to.eql(0);",
+									"  pm.expect(product.inStock).to.eql(false);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products/{{createdProductId}}/inventory",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products",
+								"{{createdProductId}}",
+								"inventory"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"delta\": -12,\n  \"note\": \"Newman: clear stock\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Boundary test: remove exactly 12. Expected: 200 OK, stock 0, no longer in stock."
+					},
+					"response": []
+				},
+				{
+					"name": "Inventory - an unknown product",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404 Not Found', () => {",
+									"  pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products/prod_nope/inventory",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products",
+								"prod_nope",
+								"inventory"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"delta\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 404 Not Found."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin - product deletion",
+			"description": "Deleting deactivates the throwaway product.",
+			"item": [
+				{
+					"name": "Delete (deactivate) the test product",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 204 No Content', () => {",
+									"  pm.response.to.have.status(204);",
+									"});",
+									"",
+									"pm.test('The body is empty', () => {",
+									"  pm.expect(pm.response.text()).to.eql('');",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products/{{createdProductId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products",
+								"{{createdProductId}}"
+							]
+						},
+						"description": "Deleting deactivates the product. Expected: 204 No Content with an empty body."
+					},
+					"response": []
+				},
+				{
+					"name": "A deleted product is hidden from the public API",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', () => {",
+									"  pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test('Error code is PRODUCT_NOT_FOUND', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('PRODUCT_NOT_FOUND');",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products/{{createdProductId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products",
+								"{{createdProductId}}"
+							]
+						},
+						"description": "Expected: 404, PRODUCT_NOT_FOUND."
+					},
+					"response": []
+				},
+				{
+					"name": "A deleted product is kept, inactive, for admins",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and the product is inactive', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.isActive).to.eql(false);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_admin}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/products/{{createdProductId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"products",
+								"{{createdProductId}}"
+							]
+						},
+						"description": "Expected: 200 OK and isActive false."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Cart",
+			"description": "The test customer's cart.",
+			"item": [
+				{
+					"name": "Cart - empty it first",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and the cart is empty', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.items).to.have.lengthOf(0);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/cart",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart"
+							]
+						},
+						"description": "Starts the cart tests from an empty cart. Expected: 200 OK and no items."
+					},
+					"response": []
+				},
+				{
+					"name": "Cart - add 2 of a product",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201 Created', () => {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response matches the Cart schema', () => {",
+									"  const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+									"  pm.response.to.have.jsonSchema(schemas.Cart_one);",
+									"});",
+									"",
+									"const line = pm.response.json().data.items.find((item) => item.productId === 'prod_0027');",
+									"",
+									"pm.test('The cart has 2 of the product at the right line total', () => {",
+									"  pm.expect(line.quantity).to.eql(2);",
+									"  pm.expect(line.lineTotalCents).to.eql(2 * line.unitPriceCents);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/cart/items",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart",
+								"items"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"productId\": \"prod_0027\",\n  \"quantity\": 2\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 201 Created, a Cart with one line of quantity 2 and a line total of 2 x the price."
+					},
+					"response": []
+				},
+				{
+					"name": "Cart - adding the same product again adds to the quantity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const items = pm.response.json().data.items;",
+									"",
+									"pm.test('Status is 201 Created', () => {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('One line with quantity 3', () => {",
+									"  pm.expect(items.filter((item) => item.productId === 'prod_0027')).to.have.lengthOf(1);",
+									"  pm.expect(items.find((item) => item.productId === 'prod_0027').quantity).to.eql(3);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/cart/items",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart",
+								"items"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"productId\": \"prod_0027\",\n  \"quantity\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: still one line, now with quantity 3."
+					},
+					"response": []
+				},
+				{
+					"name": "Cart - change the quantity to 5",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and quantity is 5', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.items.find((item) => item.productId === 'prod_0027').quantity).to.eql(5);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/cart/items/prod_0027",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart",
+								"items",
+								"prod_0027"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": 5\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 200 OK and quantity 5."
+					},
+					"response": []
+				},
+				{
+					"name": "Cart - quantity 100 is refused (above the maximum of 99)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on quantity: \"Quantity must be at most 99.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'quantity');",
+									"  pm.expect(detail, 'a field error for quantity').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Quantity must be at most 99.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/cart/items/prod_0027",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart",
+								"items",
+								"prod_0027"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": 100\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Boundary test. Expected: 400, \"Quantity must be at most 99.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Cart - quantity 0 is refused (below the minimum of 1)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on quantity: \"Quantity must be at least 1.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'quantity');",
+									"  pm.expect(detail, 'a field error for quantity').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Quantity must be at least 1.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/cart/items/prod_0027",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart",
+								"items",
+								"prod_0027"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": 0\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Boundary test. Expected: 400, \"Quantity must be at least 1.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Cart - an unknown product cannot be added",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', () => {",
+									"  pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test('Error code is PRODUCT_NOT_FOUND', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('PRODUCT_NOT_FOUND');",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/cart/items",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart",
+								"items"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"productId\": \"prod_9999\",\n  \"quantity\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 404, PRODUCT_NOT_FOUND."
+					},
+					"response": []
+				},
+				{
+					"name": "Cart - the totals add up",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const cart = pm.response.json().data;",
+									"",
+									"pm.test('Subtotal is the sum of the line totals', () => {",
+									"  const sum = cart.items.reduce((total, item) => total + item.lineTotalCents, 0);",
+									"  pm.expect(cart.subtotalCents).to.eql(sum);",
+									"});",
+									"",
+									"pm.test('Total is subtotal + tax + shipping', () => {",
+									"  pm.expect(cart.totalCents).to.eql(cart.subtotalCents + cart.taxCents + cart.shippingCents);",
+									"});",
+									"",
+									"pm.test('Item count is the sum of the quantities', () => {",
+									"  pm.expect(cart.itemCount).to.eql(cart.items.reduce((total, item) => total + item.quantity, 0));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/cart",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart"
+							]
+						},
+						"description": "Expected: subtotal = sum of line totals, and total = subtotal + tax + shipping."
+					},
+					"response": []
+				},
+				{
+					"name": "Cart - remove the product",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and the cart is empty', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.items).to.have.lengthOf(0);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/cart/items/prod_0027",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart",
+								"items",
+								"prod_0027"
+							]
+						},
+						"description": "Expected: 200 OK and an empty cart."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Checkout",
+			"description": "Placing an order from the cart.",
+			"item": [
+				{
+					"name": "Checkout - an empty cart is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 409', () => {",
+									"  pm.response.to.have.status(409);",
+									"});",
+									"",
+									"pm.test('Error code is CART_EMPTY', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('CART_EMPTY');",
+									"  pm.expect(error.message).to.eql(\"Your cart is empty.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"shipping\": {\n    \"fullName\": \"Newman Tester\",\n    \"address\": \"300 API Street\",\n    \"city\": \"Sampletown\",\n    \"postcode\": \"00000\",\n    \"country\": \"United States\"\n  },\n  \"payment\": {\n    \"cardholderName\": \"Newman Tester\",\n    \"cardNumber\": \"4242 4242 4242 4242\",\n    \"expiry\": \"12/30\",\n    \"cvv\": \"123\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 409, CART_EMPTY."
+					},
+					"response": []
+				},
+				{
+					"name": "Checkout - add a product to buy",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201 Created', () => {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.collectionVariables.set('cartTotalCents', String(pm.response.json().data.totalCents));"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/cart/items",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart",
+								"items"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"productId\": \"prod_0029\",\n  \"quantity\": 2\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Puts 2 of prod_0029 in the cart and remembers the cart total."
+					},
+					"response": []
+				},
+				{
+					"name": "Checkout - a declined card places no order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 402', () => {",
+									"  pm.response.to.have.status(402);",
+									"});",
+									"",
+									"pm.test('Error code is PAYMENT_DECLINED', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('PAYMENT_DECLINED');",
+									"  pm.expect(error.message).to.eql(\"The card was declined. No payment was taken.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"shipping\": {\n    \"fullName\": \"Newman Tester\",\n    \"address\": \"300 API Street\",\n    \"city\": \"Sampletown\",\n    \"postcode\": \"00000\",\n    \"country\": \"United States\"\n  },\n  \"payment\": {\n    \"cardholderName\": \"Newman Tester\",\n    \"cardNumber\": \"4000 0000 0000 0002\",\n    \"expiry\": \"12/30\",\n    \"cvv\": \"123\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Test card 4000 0000 0000 0002 is always declined. Expected: 402, PAYMENT_DECLINED."
+					},
+					"response": []
+				},
+				{
+					"name": "Checkout - a card number that fails the check digit",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on payment.cardNumber: \"Card number is not valid.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'payment.cardNumber');",
+									"  pm.expect(detail, 'a field error for payment.cardNumber').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Card number is not valid.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"shipping\": {\n    \"fullName\": \"Newman Tester\",\n    \"address\": \"300 API Street\",\n    \"city\": \"Sampletown\",\n    \"postcode\": \"00000\",\n    \"country\": \"United States\"\n  },\n  \"payment\": {\n    \"cardholderName\": \"Newman Tester\",\n    \"cardNumber\": \"4242 4242 4242 4241\",\n    \"expiry\": \"12/30\",\n    \"cvv\": \"123\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "The last digit is wrong (Luhn check). Expected: 400, \"Card number is not valid.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Checkout - an expired card",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on payment.expiry: \"This card has expired.\"', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'payment.expiry');",
+									"  pm.expect(detail, 'a field error for payment.expiry').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"This card has expired.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"shipping\": {\n    \"fullName\": \"Newman Tester\",\n    \"address\": \"300 API Street\",\n    \"city\": \"Sampletown\",\n    \"postcode\": \"00000\",\n    \"country\": \"United States\"\n  },\n  \"payment\": {\n    \"cardholderName\": \"Newman Tester\",\n    \"cardNumber\": \"4242 4242 4242 4242\",\n    \"expiry\": \"01/20\",\n    \"cvv\": \"123\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 400, \"This card has expired.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Checkout - shipping details are required",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('Every shipping field is reported', () => {",
+									"  const fields = pm.response.json().error.details.map((detail) => detail.field);",
+									"  for (const field of ['shipping.fullName', 'shipping.address', 'shipping.city', 'shipping.postcode', 'shipping.country']) {",
+									"    pm.expect(fields, field).to.include(field);",
+									"  }",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"shipping\": {},\n  \"payment\": {\n    \"cardholderName\": \"Newman Tester\",\n    \"cardNumber\": \"4242 4242 4242 4242\",\n    \"expiry\": \"12/30\",\n    \"cvv\": \"123\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Sends empty shipping details. Expected: 400 with a field error for each one."
+					},
+					"response": []
+				},
+				{
+					"name": "Checkout - pay with an approved card",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201 Created', () => {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response matches the Order schema', () => {",
+									"  const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+									"  pm.response.to.have.jsonSchema(schemas.Order_one);",
+									"});",
+									"",
+									"const order = pm.response.json().data;",
+									"pm.collectionVariables.set('orderId', order.id);",
+									"",
+									"pm.test('The order is paid', () => {",
+									"  pm.expect(order.status).to.eql('PAID');",
+									"  pm.expect(order.paymentStatus).to.eql('CAPTURED');",
+									"});",
+									"",
+									"pm.test('The order total equals the cart total', () => {",
+									"  pm.expect(order.totalCents).to.eql(Number(pm.collectionVariables.get('cartTotalCents')));",
+									"});",
+									"",
+									"pm.test('The order has the cart items and only the card ending', () => {",
+									"  pm.expect(order.items.map((item) => [item.productId, item.quantity])).to.eql([['prod_0029', 2]]);",
+									"  pm.expect(order.payment.cardLast4).to.eql('4242');",
+									"  pm.expect(JSON.stringify(order)).to.not.include('4242424242424242');",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"shipping\": {\n    \"fullName\": \"Newman Tester\",\n    \"address\": \"300 API Street\",\n    \"city\": \"Sampletown\",\n    \"postcode\": \"00000\",\n    \"country\": \"United States\"\n  },\n  \"payment\": {\n    \"cardholderName\": \"Newman Tester\",\n    \"cardNumber\": \"4242 4242 4242 4242\",\n    \"expiry\": \"12/30\",\n    \"cvv\": \"123\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Test card 4242 4242 4242 4242 is always approved.\nExpected: 201 Created, an Order that is PAID, with the cart's total and items. The order is cancelled later in this collection."
+					},
+					"response": []
+				},
+				{
+					"name": "Checkout - the cart is empty afterwards",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('The cart is empty', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.items).to.have.lengthOf(0);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/cart",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart"
+							]
+						},
+						"description": "Expected: no items left in the cart."
+					},
+					"response": []
+				},
+				{
+					"name": "Checkout - repeating the checkout creates no second order (duplicate request)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 409', () => {",
+									"  pm.response.to.have.status(409);",
+									"});",
+									"",
+									"pm.test('Error code is CART_EMPTY', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('CART_EMPTY');",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"shipping\": {\n    \"fullName\": \"Newman Tester\",\n    \"address\": \"300 API Street\",\n    \"city\": \"Sampletown\",\n    \"postcode\": \"00000\",\n    \"country\": \"United States\"\n  },\n  \"payment\": {\n    \"cardholderName\": \"Newman Tester\",\n    \"cardNumber\": \"4242 4242 4242 4242\",\n    \"expiry\": \"12/30\",\n    \"cvv\": \"123\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "The same checkout sent again. Expected: 409, CART_EMPTY."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Orders",
+			"description": "Order history, details and cancellation.",
+			"item": [
+				{
+					"name": "Orders - the history lists the new order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response matches the Order page schema', () => {",
+									"  const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+									"  pm.response.to.have.jsonSchema(schemas.Order_page);",
+									"});",
+									"",
+									"pm.test('The new order is listed', () => {",
+									"  pm.expect(pm.response.json().data.map((order) => order.id)).to.include(pm.collectionVariables.get('orderId'));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders?pageSize=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							],
+							"query": [
+								{
+									"key": "pageSize",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Expected: 200 OK, an Order page that includes the order just placed."
+					},
+					"response": []
+				},
+				{
+					"name": "Orders - filter by status PAID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and every order is PAID', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.every((order) => order.status === 'PAID')).to.eql(true);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders?status=PAID&pageSize=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "PAID"
+								},
+								{
+									"key": "pageSize",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Expected: only PAID orders."
+					},
+					"response": []
+				},
+				{
+					"name": "Orders - an unknown status is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on status', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'status');",
+									"  pm.expect(detail, 'a field error for status').to.exist;",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders?status=LOST",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "LOST"
+								}
+							]
+						},
+						"description": "Expected: 400 on status."
+					},
+					"response": []
+				},
+				{
+					"name": "Orders - details of the new order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('It is the order just placed', () => {",
+									"  pm.expect(pm.response.json().data.id).to.eql(pm.collectionVariables.get('orderId'));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders/{{orderId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"{{orderId}}"
+							]
+						},
+						"description": "Expected: 200 OK and the order."
+					},
+					"response": []
+				},
+				{
+					"name": "Orders - another customer's order is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 403', () => {",
+									"  pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.test('Error code is FORBIDDEN', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('FORBIDDEN');",
+									"  pm.expect(error.message).to.eql(\"This order belongs to another user.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders/order_0005",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"order_0005"
+							]
+						},
+						"description": "order_0005 belongs to Bob. Authorization test. Expected: 403, FORBIDDEN."
+					},
+					"response": []
+				},
+				{
+					"name": "Orders - an unknown order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', () => {",
+									"  pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test('Error code is ORDER_NOT_FOUND', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('ORDER_NOT_FOUND');",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders/order_nope",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"order_nope"
+							]
+						},
+						"description": "Expected: 404, ORDER_NOT_FOUND."
+					},
+					"response": []
+				},
+				{
+					"name": "Orders - cancel the new order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and the order is CANCELLED', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.status).to.eql('CANCELLED');",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders/{{orderId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"{{orderId}}",
+								"cancel"
+							]
+						},
+						"description": "Also cleans up the test order. Expected: 200 OK and status CANCELLED."
+					},
+					"response": []
+				},
+				{
+					"name": "Orders - cancelling again is refused (duplicate request)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 409', () => {",
+									"  pm.response.to.have.status(409);",
+									"});",
+									"",
+									"pm.test('Error code is ORDER_NOT_CANCELLABLE', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('ORDER_NOT_CANCELLABLE');",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders/{{orderId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"{{orderId}}",
+								"cancel"
+							]
+						},
+						"description": "Expected: 409, ORDER_NOT_CANCELLABLE."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"/*",
+					" * DYNAMIC TOKEN HANDLING (runs before every request in this collection)",
+					" *",
+					" * A request that needs a session sends the header",
+					" *     Authorization: Bearer {{token_<module>}}",
+					" * where <module> is ecommerce, banking, travel or admin. Each sign-in opens one module, so",
+					" * there is one token per module.",
+					" *",
+					" * This script looks at that header. If the token for that module is missing, or expires within",
+					" * a minute, it signs in first with pm.sendRequest, using the credentials from the environment",
+					" * (testUsername/testPassword, or adminUsername/adminPassword for admin), and saves the token",
+					" * and its expiry time as collection variables. Postman waits for the sign-in to finish before",
+					" * it sends the request itself.",
+					" *",
+					" * Requests in this collection have Settings > \"Disable cookie jar\" on, so they authenticate with",
+					" * the Bearer token only. pm.sendRequest still uses the cookie jar, so after each sign-in this",
+					" * script clears the session cookie it received.",
+					" */",
+					"const header = pm.request.headers.get('Authorization') || '';",
+					"const wanted = header.match(/\\{\\{token_(ecommerce|banking|travel|admin)\\}\\}/);",
+					"",
+					"if (wanted) {",
+					"  const module = wanted[1];",
+					"  const tokenKey = `token_${module}`;",
+					"  const expiresKey = `token_${module}_expires`;",
+					"  const expiresAt = Number(pm.collectionVariables.get(expiresKey) || 0);",
+					"  const stillValid = pm.collectionVariables.get(tokenKey) && Date.now() < expiresAt - 60 * 1000;",
+					"",
+					"  if (!stillValid) {",
+					"    const admin = module === 'admin';",
+					"    const email = pm.environment.get(admin ? 'adminUsername' : 'testUsername');",
+					"    const password = pm.environment.get(admin ? 'adminPassword' : 'testPassword');",
+					"    if (!email || !password) {",
+					"      throw new Error(",
+					"        `Set ${admin ? 'adminUsername and adminPassword' : 'testUsername and testPassword'} in the selected environment (Current value).`,",
+					"      );",
+					"    }",
+					"",
+					"    pm.sendRequest(",
+					"      {",
+					"        url: `${pm.environment.get('baseUrl')}/auth/login`,",
+					"        method: 'POST',",
+					"        header: { 'Content-Type': 'application/json' },",
+					"        body: { mode: 'raw', raw: JSON.stringify({ email, password, module }) },",
+					"      },",
+					"      (error, response) => {",
+					"        if (error || response.code !== 200) {",
+					"          throw new Error(`Automatic sign-in to ${module} failed: ${error ? error.message : `${response.code} ${response.text()}`}`);",
+					"        }",
+					"        const { token, expiresIn } = response.json().data;",
+					"        pm.collectionVariables.set(tokenKey, token);",
+					"        pm.collectionVariables.set(expiresKey, String(Date.now() + expiresIn * 1000));",
+					"",
+					"        // The sign-in also stored the app's session cookie. If it stayed, the next automatic",
+					"        // sign-in would send it, and the app would end that session (and so this token).",
+					"        pm.cookies.jar().clear(pm.environment.get('baseUrl'), (clearError) => {",
+					"          if (clearError) {",
+					"            console.warn(",
+					"              'Could not clear the session cookie. In Postman, open Cookies > Domains Allowlist and add the API domain ' +",
+					"                '(for example quality-lab-jb.vercel.app), or tokens of other modules may stop working.',",
+					"            );",
+					"          }",
+					"        });",
+					"      },",
+					"    );",
+					"  }",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"/*",
+					" * CHECKS FOR EVERY RESPONSE (run after every request in this collection)",
+					" * Each request's own Tests tab adds the checks for that request.",
+					" */",
+					"pm.test('[every response] no server error (status below 500)', () => {",
+					"  pm.expect(pm.response.code).to.be.below(500);",
+					"});",
+					"",
+					"pm.test('[every response] answered within 20 seconds', () => {",
+					"  pm.expect(pm.response.responseTime).to.be.below(20000);",
+					"});",
+					"",
+					"pm.test('[every response] carries an x-request-id header', () => {",
+					"  pm.response.to.have.header('x-request-id');",
+					"});",
+					"",
+					"if (pm.response.code !== 204) {",
+					"  pm.test('[every response] body is JSON', () => {",
+					"    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+					"  });",
+					"}",
+					"",
+					"// Every error uses the same shape: { error: { code, message, details?, requestId } }.",
+					"if (pm.response.code >= 400) {",
+					"  pm.test('[every response] error body matches the ErrorResponse schema', () => {",
+					"    const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+					"    pm.response.to.have.jsonSchema(schemas.ErrorResponse);",
+					"  });",
+					"}"
+				]
+			}
+		}
+	],
+	"protocolProfileBehavior": {
+		"disableCookies": true
+	},
+	"variable": [
+		{
+			"key": "schemas",
+			"value": "{\"User_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"email\":{\"type\":\"string\"},\"firstName\":{\"type\":\"string\"},\"lastName\":{\"type\":\"string\"},\"role\":{\"type\":\"string\",\"enum\":[\"CUSTOMER\",\"ADMIN\"]},\"status\":{\"type\":\"string\",\"enum\":[\"ACTIVE\",\"DISABLED\"]},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"email\",\"firstName\",\"lastName\",\"role\",\"status\",\"createdAt\"]}}},\"LoginResult_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"token\":{\"type\":\"string\"},\"tokenType\":{\"type\":\"string\"},\"expiresIn\":{\"type\":\"integer\"},\"module\":{\"type\":\"string\",\"enum\":[\"ecommerce\",\"banking\",\"travel\",\"admin\"]},\"user\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"email\":{\"type\":\"string\"},\"firstName\":{\"type\":\"string\"},\"lastName\":{\"type\":\"string\"},\"role\":{\"type\":\"string\",\"enum\":[\"CUSTOMER\",\"ADMIN\"]},\"status\":{\"type\":\"string\",\"enum\":[\"ACTIVE\",\"DISABLED\"]},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"email\",\"firstName\",\"lastName\",\"role\",\"status\",\"createdAt\"]}},\"required\":[\"token\",\"tokenType\",\"expiresIn\",\"module\",\"user\"]}}},\"Product_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"category\":{\"type\":\"string\"},\"brand\":{\"type\":\"string\"},\"priceCents\":{\"type\":\"integer\"},\"listPriceCents\":{\"type\":[\"integer\",\"null\"]},\"onSale\":{\"type\":\"boolean\"},\"discountPercent\":{\"type\":[\"integer\",\"null\"]},\"stock\":{\"type\":\"integer\"},\"inStock\":{\"type\":\"boolean\"},\"rating\":{\"type\":\"number\"},\"imageUrl\":{\"type\":[\"string\",\"null\"]},\"isActive\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"updatedAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"sku\",\"name\",\"description\",\"category\",\"brand\",\"priceCents\",\"listPriceCents\",\"onSale\",\"discountPercent\",\"stock\",\"inStock\",\"rating\",\"imageUrl\",\"isActive\",\"createdAt\",\"updatedAt\"]}}},\"Product_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"category\":{\"type\":\"string\"},\"brand\":{\"type\":\"string\"},\"priceCents\":{\"type\":\"integer\"},\"listPriceCents\":{\"type\":[\"integer\",\"null\"]},\"onSale\":{\"type\":\"boolean\"},\"discountPercent\":{\"type\":[\"integer\",\"null\"]},\"stock\":{\"type\":\"integer\"},\"inStock\":{\"type\":\"boolean\"},\"rating\":{\"type\":\"number\"},\"imageUrl\":{\"type\":[\"string\",\"null\"]},\"isActive\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"updatedAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"sku\",\"name\",\"description\",\"category\",\"brand\",\"priceCents\",\"listPriceCents\",\"onSale\",\"discountPercent\",\"stock\",\"inStock\",\"rating\",\"imageUrl\",\"isActive\",\"createdAt\",\"updatedAt\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"Cart_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"productId\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"unitPriceCents\":{\"type\":\"integer\"},\"quantity\":{\"type\":\"integer\"},\"lineTotalCents\":{\"type\":\"integer\"},\"availableStock\":{\"type\":\"integer\"}},\"required\":[\"productId\",\"sku\",\"name\",\"unitPriceCents\",\"quantity\",\"lineTotalCents\",\"availableStock\"]}},\"itemCount\":{\"type\":\"integer\"},\"subtotalCents\":{\"type\":\"integer\"},\"taxCents\":{\"type\":\"integer\"},\"shippingCents\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"}},\"required\":[\"items\",\"itemCount\",\"subtotalCents\",\"taxCents\",\"shippingCents\",\"totalCents\"]}}},\"Order_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"orderNumber\":{\"type\":\"string\"},\"userId\":{\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"PAID\",\"SHIPPED\",\"DELIVERED\",\"CANCELLED\"]},\"paymentStatus\":{\"type\":\"string\",\"enum\":[\"CAPTURED\",\"REFUNDED\"]},\"subtotalCents\":{\"type\":\"integer\"},\"taxCents\":{\"type\":\"integer\"},\"shippingCents\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"},\"shipping\":{\"type\":\"object\",\"properties\":{\"fullName\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"postcode\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"}},\"required\":[\"fullName\",\"address\",\"city\",\"postcode\",\"country\"]},\"payment\":{\"type\":\"object\",\"properties\":{\"cardBrand\":{\"type\":\"string\"},\"cardLast4\":{\"type\":\"string\"}},\"required\":[\"cardBrand\",\"cardLast4\"]},\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"productId\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"unitPriceCents\":{\"type\":\"integer\"},\"quantity\":{\"type\":\"integer\"},\"lineTotalCents\":{\"type\":\"integer\"}},\"required\":[\"productId\",\"sku\",\"name\",\"unitPriceCents\",\"quantity\",\"lineTotalCents\"]}},\"canCancel\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"cancelledAt\":{\"type\":[\"string\",\"null\"],\"format\":\"date-time\"}},\"required\":[\"id\",\"orderNumber\",\"userId\",\"status\",\"paymentStatus\",\"subtotalCents\",\"taxCents\",\"shippingCents\",\"totalCents\",\"shipping\",\"payment\",\"items\",\"canCancel\",\"createdAt\",\"cancelledAt\"]}}},\"Order_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"orderNumber\":{\"type\":\"string\"},\"userId\":{\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"PAID\",\"SHIPPED\",\"DELIVERED\",\"CANCELLED\"]},\"paymentStatus\":{\"type\":\"string\",\"enum\":[\"CAPTURED\",\"REFUNDED\"]},\"subtotalCents\":{\"type\":\"integer\"},\"taxCents\":{\"type\":\"integer\"},\"shippingCents\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"},\"shipping\":{\"type\":\"object\",\"properties\":{\"fullName\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"postcode\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"}},\"required\":[\"fullName\",\"address\",\"city\",\"postcode\",\"country\"]},\"payment\":{\"type\":\"object\",\"properties\":{\"cardBrand\":{\"type\":\"string\"},\"cardLast4\":{\"type\":\"string\"}},\"required\":[\"cardBrand\",\"cardLast4\"]},\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"productId\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"unitPriceCents\":{\"type\":\"integer\"},\"quantity\":{\"type\":\"integer\"},\"lineTotalCents\":{\"type\":\"integer\"}},\"required\":[\"productId\",\"sku\",\"name\",\"unitPriceCents\",\"quantity\",\"lineTotalCents\"]}},\"canCancel\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"cancelledAt\":{\"type\":[\"string\",\"null\"],\"format\":\"date-time\"}},\"required\":[\"id\",\"orderNumber\",\"userId\",\"status\",\"paymentStatus\",\"subtotalCents\",\"taxCents\",\"shippingCents\",\"totalCents\",\"shipping\",\"payment\",\"items\",\"canCancel\",\"createdAt\",\"cancelledAt\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"BankAccount_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"accountNumber\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"CHECKING\",\"SAVINGS\",\"TIME_DEPOSIT\"]},\"product\":{\"type\":[\"string\",\"null\"],\"enum\":[\"STARTER_SAVINGS\",\"EVERYDAY_CHECKING\",\"TIME_DEPOSIT\",null]},\"productName\":{\"type\":[\"string\",\"null\"]},\"status\":{\"type\":\"string\",\"enum\":[\"ACTIVE\",\"FROZEN\"]},\"currency\":{\"type\":\"string\"},\"balanceCents\":{\"type\":\"integer\"},\"termMonths\":{\"type\":[\"integer\",\"null\"]},\"interestRateBps\":{\"type\":[\"integer\",\"null\"]},\"maturityDate\":{\"type\":[\"string\",\"null\"],\"format\":\"date\"},\"locked\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"accountNumber\",\"name\",\"type\",\"product\",\"productName\",\"status\",\"currency\",\"balanceCents\",\"termMonths\",\"interestRateBps\",\"maturityDate\",\"locked\",\"createdAt\"]}}},\"BankAccount_list\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"accountNumber\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"CHECKING\",\"SAVINGS\",\"TIME_DEPOSIT\"]},\"product\":{\"type\":[\"string\",\"null\"],\"enum\":[\"STARTER_SAVINGS\",\"EVERYDAY_CHECKING\",\"TIME_DEPOSIT\",null]},\"productName\":{\"type\":[\"string\",\"null\"]},\"status\":{\"type\":\"string\",\"enum\":[\"ACTIVE\",\"FROZEN\"]},\"currency\":{\"type\":\"string\"},\"balanceCents\":{\"type\":\"integer\"},\"termMonths\":{\"type\":[\"integer\",\"null\"]},\"interestRateBps\":{\"type\":[\"integer\",\"null\"]},\"maturityDate\":{\"type\":[\"string\",\"null\"],\"format\":\"date\"},\"locked\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"accountNumber\",\"name\",\"type\",\"product\",\"productName\",\"status\",\"currency\",\"balanceCents\",\"termMonths\",\"interestRateBps\",\"maturityDate\",\"locked\",\"createdAt\"]}}}},\"BankTransaction_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"reference\":{\"type\":\"string\"},\"accountId\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"DEPOSIT\",\"WITHDRAWAL\",\"TRANSFER_IN\",\"TRANSFER_OUT\",\"LOAN_DISBURSEMENT\",\"LOAN_PAYMENT\"]},\"amountCents\":{\"type\":\"integer\"},\"balanceAfterCents\":{\"type\":\"integer\"},\"counterparty\":{\"type\":[\"string\",\"null\"]},\"description\":{\"type\":[\"string\",\"null\"]},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"reference\",\"accountId\",\"type\",\"amountCents\",\"balanceAfterCents\",\"counterparty\",\"description\",\"createdAt\"]}}},\"BankTransaction_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"reference\":{\"type\":\"string\"},\"accountId\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"DEPOSIT\",\"WITHDRAWAL\",\"TRANSFER_IN\",\"TRANSFER_OUT\",\"LOAN_DISBURSEMENT\",\"LOAN_PAYMENT\"]},\"amountCents\":{\"type\":\"integer\"},\"balanceAfterCents\":{\"type\":\"integer\"},\"counterparty\":{\"type\":[\"string\",\"null\"]},\"description\":{\"type\":[\"string\",\"null\"]},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"reference\",\"accountId\",\"type\",\"amountCents\",\"balanceAfterCents\",\"counterparty\",\"description\",\"createdAt\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"HotelSummary_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"starRating\":{\"type\":\"integer\"},\"amenities\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"imageUrl\":{\"type\":[\"string\",\"null\"]},\"fromPriceCents\":{\"type\":\"integer\"},\"matchingRooms\":{\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"city\",\"country\",\"address\",\"description\",\"starRating\",\"amenities\",\"imageUrl\",\"fromPriceCents\",\"matchingRooms\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"HotelDetail_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"allOf\":[{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"starRating\":{\"type\":\"integer\"},\"amenities\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"imageUrl\":{\"type\":[\"string\",\"null\"]},\"fromPriceCents\":{\"type\":\"integer\"},\"matchingRooms\":{\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"city\",\"country\",\"address\",\"description\",\"starRating\",\"amenities\",\"imageUrl\"]},{\"type\":\"object\",\"properties\":{\"rooms\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"hotelId\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"STANDARD\",\"DELUXE\",\"SUITE\",\"FAMILY\"]},\"description\":{\"type\":\"string\"},\"maxGuests\":{\"type\":\"integer\"},\"pricePerNightCents\":{\"type\":\"integer\"},\"totalRooms\":{\"type\":\"integer\"},\"availableRooms\":{\"type\":[\"integer\",\"null\"]},\"available\":{\"type\":[\"boolean\",\"null\"]},\"nights\":{\"type\":[\"integer\",\"null\"]},\"stayTotalCents\":{\"type\":[\"integer\",\"null\"]}},\"required\":[\"id\",\"hotelId\",\"name\",\"type\",\"description\",\"maxGuests\",\"pricePerNightCents\",\"totalRooms\",\"availableRooms\",\"available\",\"nights\",\"stayTotalCents\"]}}},\"required\":[\"rooms\"]}]}}},\"Room_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"hotelId\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"STANDARD\",\"DELUXE\",\"SUITE\",\"FAMILY\"]},\"description\":{\"type\":\"string\"},\"maxGuests\":{\"type\":\"integer\"},\"pricePerNightCents\":{\"type\":\"integer\"},\"totalRooms\":{\"type\":\"integer\"},\"availableRooms\":{\"type\":[\"integer\",\"null\"]},\"available\":{\"type\":[\"boolean\",\"null\"]},\"nights\":{\"type\":[\"integer\",\"null\"]},\"stayTotalCents\":{\"type\":[\"integer\",\"null\"]}},\"required\":[\"id\",\"hotelId\",\"name\",\"type\",\"description\",\"maxGuests\",\"pricePerNightCents\",\"totalRooms\",\"availableRooms\",\"available\",\"nights\",\"stayTotalCents\"]}}},\"Booking_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"bookingNumber\":{\"type\":\"string\"},\"userId\":{\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"CONFIRMED\",\"CANCELLED\"]},\"checkIn\":{\"type\":\"string\",\"format\":\"date\"},\"checkOut\":{\"type\":\"string\",\"format\":\"date\"},\"guests\":{\"type\":\"integer\"},\"nights\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"},\"room\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\"},\"pricePerNightCents\":{\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"type\",\"pricePerNightCents\"]},\"hotel\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"city\",\"country\"]},\"canCancel\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"cancelledAt\":{\"type\":[\"string\",\"null\"],\"format\":\"date-time\"}},\"required\":[\"id\",\"bookingNumber\",\"userId\",\"status\",\"checkIn\",\"checkOut\",\"guests\",\"nights\",\"totalCents\",\"room\",\"hotel\",\"canCancel\",\"createdAt\",\"cancelledAt\"]}}},\"Booking_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"bookingNumber\":{\"type\":\"string\"},\"userId\":{\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"CONFIRMED\",\"CANCELLED\"]},\"checkIn\":{\"type\":\"string\",\"format\":\"date\"},\"checkOut\":{\"type\":\"string\",\"format\":\"date\"},\"guests\":{\"type\":\"integer\"},\"nights\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"},\"room\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\"},\"pricePerNightCents\":{\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"type\",\"pricePerNightCents\"]},\"hotel\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"city\",\"country\"]},\"canCancel\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"cancelledAt\":{\"type\":[\"string\",\"null\"],\"format\":\"date-time\"}},\"required\":[\"id\",\"bookingNumber\",\"userId\",\"status\",\"checkIn\",\"checkOut\",\"guests\",\"nights\",\"totalCents\",\"room\",\"hotel\",\"canCancel\",\"createdAt\",\"cancelledAt\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"ErrorResponse\":{\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"object\",\"required\":[\"code\",\"message\",\"requestId\"],\"properties\":{\"code\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"},\"details\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"field\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"}},\"required\":[\"message\"]}},\"requestId\":{\"type\":\"string\",\"format\":\"uuid\"}}}}}}",
+			"type": "string",
+			"description": "JSON schemas built from the API OpenAPI document (npm run schemas). Tests read them."
+		},
+		{
+			"key": "token_ecommerce",
+			"value": "",
+			"type": "string",
+			"description": "Filled automatically before the first request that needs it."
+		},
+		{
+			"key": "token_ecommerce_expires",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_banking",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_banking_expires",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_travel",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_travel_expires",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_admin",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_admin_expires",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "productSku",
+			"value": "",
+			"type": "string",
+			"description": "Set by \"Create a product\"."
+		},
+		{
+			"key": "createdProductId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "cartTotalCents",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "orderId",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

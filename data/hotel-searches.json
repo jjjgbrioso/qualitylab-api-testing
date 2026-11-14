@@ -1,0 +1,122 @@
+[
+  {
+    "case": "Kyoto",
+    "query": {
+      "destination": "Kyoto"
+    },
+    "expectedStatus": 200,
+    "minResults": 2,
+    "maxResults": 2,
+    "city": "Kyoto"
+  },
+  {
+    "case": "kyoto in small letters",
+    "query": {
+      "destination": "kyoto"
+    },
+    "expectedStatus": 200,
+    "minResults": 2,
+    "maxResults": 2,
+    "city": "Kyoto"
+  },
+  {
+    "case": "Lisbon",
+    "query": {
+      "destination": "Lisbon"
+    },
+    "expectedStatus": 200,
+    "minResults": 2,
+    "city": "Lisbon"
+  },
+  {
+    "case": "4 stars or more with a pool",
+    "query": {
+      "minStars": 4,
+      "amenity": "Pool"
+    },
+    "expectedStatus": 200,
+    "minResults": 1,
+    "minStars": 4,
+    "amenity": "Pool"
+  },
+  {
+    "case": "5 stars",
+    "query": {
+      "minStars": 5
+    },
+    "expectedStatus": 200,
+    "minResults": 1,
+    "minStars": 5
+  },
+  {
+    "case": "1 star (the minimum) returns every hotel",
+    "query": {
+      "minStars": 1,
+      "pageSize": 50
+    },
+    "expectedStatus": 200,
+    "minResults": 12
+  },
+  {
+    "case": "a spa in Reykjavik",
+    "query": {
+      "destination": "Reykjavik",
+      "amenity": "Spa"
+    },
+    "expectedStatus": 200,
+    "minResults": 1,
+    "city": "Reykjavik",
+    "amenity": "Spa"
+  },
+  {
+    "case": "no hotels in Atlantis",
+    "query": {
+      "destination": "Atlantis"
+    },
+    "expectedStatus": 200,
+    "minResults": 0,
+    "maxResults": 0
+  },
+  {
+    "case": "0 stars (below the minimum)",
+    "query": {
+      "minStars": 0
+    },
+    "expectedStatus": 400,
+    "expectedField": "minStars"
+  },
+  {
+    "case": "6 stars (above the maximum)",
+    "query": {
+      "minStars": 6
+    },
+    "expectedStatus": 400,
+    "expectedField": "minStars"
+  },
+  {
+    "case": "unknown sort order",
+    "query": {
+      "sort": "cheapest"
+    },
+    "expectedStatus": 400,
+    "expectedField": "sort"
+  },
+  {
+    "case": "check-in in the past",
+    "query": {
+      "checkIn": "2020-01-01",
+      "checkOut": "2020-01-03"
+    },
+    "expectedStatus": 400,
+    "expectedField": "checkIn"
+  },
+  {
+    "case": "check-out before check-in",
+    "query": {
+      "checkIn": "2031-05-10",
+      "checkOut": "2031-05-08"
+    },
+    "expectedStatus": 400,
+    "expectedField": "checkOut"
+  }
+]

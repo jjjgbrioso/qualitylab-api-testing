@@ -1,0 +1,123 @@
+[
+  {
+    "case": "password of 7 characters (one below the minimum)",
+    "email": "newman.invalid@qualitylab.test",
+    "password": "Aa1!aaa",
+    "firstName": "Newman",
+    "lastName": "Tester",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "password",
+    "expectedMessage": "Password must be at least 8 characters."
+  },
+  {
+    "case": "password of 73 characters (one above the maximum)",
+    "email": "newman.invalid@qualitylab.test",
+    "password": "Aa1!aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "firstName": "Newman",
+    "lastName": "Tester",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "password",
+    "expectedMessage": "Password must be at most 72 characters."
+  },
+  {
+    "case": "password without an uppercase letter",
+    "email": "newman.invalid@qualitylab.test",
+    "password": "abcdef1!",
+    "firstName": "Newman",
+    "lastName": "Tester",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "password",
+    "expectedMessage": "Password must include an uppercase letter."
+  },
+  {
+    "case": "password without a lowercase letter",
+    "email": "newman.invalid@qualitylab.test",
+    "password": "ABCDEF1!",
+    "firstName": "Newman",
+    "lastName": "Tester",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "password",
+    "expectedMessage": "Password must include a lowercase letter."
+  },
+  {
+    "case": "password without a number",
+    "email": "newman.invalid@qualitylab.test",
+    "password": "Abcdefg!",
+    "firstName": "Newman",
+    "lastName": "Tester",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "password",
+    "expectedMessage": "Password must include a number."
+  },
+  {
+    "case": "password without a special character",
+    "email": "newman.invalid@qualitylab.test",
+    "password": "Abcdefg1",
+    "firstName": "Newman",
+    "lastName": "Tester",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "password",
+    "expectedMessage": "Password must include a special character."
+  },
+  {
+    "case": "first name missing",
+    "email": "newman.invalid@qualitylab.test",
+    "password": "Valid#Pass1",
+    "firstName": null,
+    "lastName": "Tester",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "firstName",
+    "expectedMessage": "First name is required."
+  },
+  {
+    "case": "first name of 51 characters (one above the maximum)",
+    "email": "newman.invalid@qualitylab.test",
+    "password": "Valid#Pass1",
+    "firstName": "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+    "lastName": "Tester",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "firstName",
+    "expectedMessage": "First name must be at most 50 characters."
+  },
+  {
+    "case": "last name only spaces",
+    "email": "newman.invalid@qualitylab.test",
+    "password": "Valid#Pass1",
+    "firstName": "Newman",
+    "lastName": "   ",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "lastName",
+    "expectedMessage": "Last name is required."
+  },
+  {
+    "case": "email not an email address",
+    "email": "newman-at-qualitylab",
+    "password": "Valid#Pass1",
+    "firstName": "Newman",
+    "lastName": "Tester",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "email",
+    "expectedMessage": "Enter a valid email address."
+  },
+  {
+    "case": "email missing",
+    "email": null,
+    "password": "Valid#Pass1",
+    "firstName": "Newman",
+    "lastName": "Tester",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "email",
+    "expectedMessage": "Email is required."
+  }
+]

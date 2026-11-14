@@ -1,0 +1,97 @@
+[
+  {
+    "case": "account number of 5 digits",
+    "from": "<checking id>",
+    "to": "12345",
+    "amountCents": 1000,
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "toAccountNumber",
+    "expectedMessage": "Account number must be exactly 10 digits."
+  },
+  {
+    "case": "account number of 11 digits",
+    "from": "<checking id>",
+    "to": "12345678901",
+    "amountCents": 1000,
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "toAccountNumber",
+    "expectedMessage": "Account number must be exactly 10 digits."
+  },
+  {
+    "case": "account number with letters",
+    "from": "<checking id>",
+    "to": "10000000AB",
+    "amountCents": 1000,
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "toAccountNumber",
+    "expectedMessage": "Account number must be exactly 10 digits."
+  },
+  {
+    "case": "destination missing",
+    "from": "<checking id>",
+    "to": null,
+    "amountCents": 1000,
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "toAccountNumber",
+    "expectedMessage": "Destination account number is required."
+  },
+  {
+    "case": "account number nobody has",
+    "from": "<checking id>",
+    "to": "9999999999",
+    "amountCents": 1000,
+    "expectedStatus": 404,
+    "expectedCode": "ACCOUNT_NOT_FOUND",
+    "expectedField": "toAccountNumber",
+    "expectedMessage": "No account matches this value."
+  },
+  {
+    "case": "the same account as the source",
+    "from": "<checking id>",
+    "to": "<checking number>",
+    "amountCents": 1000,
+    "expectedStatus": 422,
+    "expectedCode": "SAME_ACCOUNT_TRANSFER",
+    "expectedField": "toAccountNumber"
+  },
+  {
+    "case": "a frozen account",
+    "from": "<checking id>",
+    "to": "1000000004",
+    "amountCents": 1000,
+    "expectedStatus": 422,
+    "expectedCode": "ACCOUNT_FROZEN",
+    "expectedMessage": "Account 1000000004 is frozen."
+  },
+  {
+    "case": "an amount of zero",
+    "from": "<checking id>",
+    "to": "<savings number>",
+    "amountCents": 0,
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "amountCents",
+    "expectedMessage": "Amount must be greater than zero."
+  },
+  {
+    "case": "one centavo over the limit",
+    "from": "<checking id>",
+    "to": "<savings number>",
+    "amountCents": 1000001,
+    "expectedStatus": 422,
+    "expectedCode": "LIMIT_EXCEEDED",
+    "expectedField": "amountCents"
+  },
+  {
+    "case": "from another customer's account",
+    "from": "acct_bob_chk",
+    "to": "<checking number>",
+    "amountCents": 1000,
+    "expectedStatus": 403,
+    "expectedCode": "FORBIDDEN"
+  }
+]

@@ -1,0 +1,61 @@
+[
+  {
+    "case": "zero",
+    "amountCents": 0,
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "amountCents",
+    "expectedMessage": "Amount must be greater than zero."
+  },
+  {
+    "case": "negative",
+    "amountCents": -500,
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "amountCents",
+    "expectedMessage": "Amount must be greater than zero."
+  },
+  {
+    "case": "half a centavo",
+    "amountCents": 0.5,
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "amountCents",
+    "expectedMessage": "Amount must be a whole number of cents."
+  },
+  {
+    "case": "a fraction of a centavo",
+    "amountCents": 10.5,
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "amountCents",
+    "expectedMessage": "Amount must be a whole number of cents."
+  },
+  {
+    "case": "text instead of a number",
+    "amountCents": "500",
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "amountCents"
+  },
+  {
+    "case": "missing (null)",
+    "amountCents": null,
+    "expectedStatus": 400,
+    "expectedCode": "VALIDATION_ERROR",
+    "expectedField": "amountCents"
+  },
+  {
+    "case": "one centavo over the 10,000.00 limit",
+    "amountCents": 1000001,
+    "expectedStatus": 422,
+    "expectedCode": "LIMIT_EXCEEDED",
+    "expectedField": "amountCents",
+    "expectedMessage": "Maximum is ₱10,000.00."
+  },
+  {
+    "case": "one centavo (the smallest valid amount)",
+    "amountCents": 1,
+    "expectedStatus": 201
+  }
+]

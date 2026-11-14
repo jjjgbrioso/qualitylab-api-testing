@@ -1,0 +1,2549 @@
+{
+	"info": {
+		"_postman_id": "37678e3c-0bd7-5368-a583-5071afd051dc",
+		"name": "04 - QualityLab Travel",
+		"description": "Hotel listing and search, hotel details, room availability, bookings, booking details and cancellation.\n\nStays use random dates 400 to 700 days ahead. Every booking made here is cancelled at the end.\nThe \"Known defects\" folder holds tests for genuine application defects (see DEFECTS.md); they fail until the app is fixed.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Hotel listing",
+			"description": "All hotels, sorting and paging.",
+			"item": [
+				{
+					"name": "Hotels - all hotels, default order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response matches the HotelSummary page schema', () => {",
+									"  const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+									"  pm.response.to.have.jsonSchema(schemas.HotelSummary_page);",
+									"});",
+									"",
+									"const { data: hotels, meta } = pm.response.json();",
+									"",
+									"pm.test('Hotels are listed, sorted by name', () => {",
+									"  pm.expect(hotels.length).to.be.above(0);",
+									"  const names = hotels.map((hotel) => hotel.name);",
+									"  pm.expect(names).to.eql([...names].sort((a, b) => a.localeCompare(b)));",
+									"});",
+									"",
+									"pm.test('All hotels fit on one page of 50', () => {",
+									"  pm.expect(meta.totalItems).to.eql(hotels.length);",
+									"});",
+									"",
+									"pm.test('Star ratings are 1 to 5', () => {",
+									"  for (const hotel of hotels) pm.expect(hotel.starRating, hotel.name).to.be.within(1, 5);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hotels?pageSize=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hotels"
+							],
+							"query": [
+								{
+									"key": "pageSize",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Public endpoint. Expected: 200 OK, a HotelSummary page sorted by name."
+					},
+					"response": []
+				},
+				{
+					"name": "Hotels - sort by price, low to high",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and prices go up', () => {",
+									"  pm.response.to.have.status(200);",
+									"  const prices = pm.response.json().data.map((hotel) => hotel.fromPriceCents);",
+									"  pm.expect(prices).to.eql([...prices].sort((a, b) => a - b));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hotels?sort=price_asc&pageSize=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hotels"
+							],
+							"query": [
+								{
+									"key": "sort",
+									"value": "price_asc"
+								},
+								{
+									"key": "pageSize",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Expected: \"from\" prices in ascending order."
+					},
+					"response": []
+				},
+				{
+					"name": "Hotels - sort by stars, high to low",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and stars go down', () => {",
+									"  pm.response.to.have.status(200);",
+									"  const stars = pm.response.json().data.map((hotel) => hotel.starRating);",
+									"  pm.expect(stars).to.eql([...stars].sort((a, b) => b - a));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hotels?sort=stars_desc&pageSize=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hotels"
+							],
+							"query": [
+								{
+									"key": "sort",
+									"value": "stars_desc"
+								},
+								{
+									"key": "pageSize",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Expected: star ratings in descending order."
+					},
+					"response": []
+				},
+				{
+					"name": "Hotels - an unknown sort order is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on sort', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'sort');",
+									"  pm.expect(detail, 'a field error for sort').to.exist;",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hotels?sort=cheap",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hotels"
+							],
+							"query": [
+								{
+									"key": "sort",
+									"value": "cheap"
+								}
+							]
+						},
+						"description": "Expected: 400 on sort."
+					},
+					"response": []
+				},
+				{
+					"name": "Hotels - page size 101 is refused (boundary)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on pageSize', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'pageSize');",
+									"  pm.expect(detail, 'a field error for pageSize').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Page size must be at most 100.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hotels?pageSize=101",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hotels"
+							],
+							"query": [
+								{
+									"key": "pageSize",
+									"value": "101"
+								}
+							]
+						},
+						"description": "Expected: 400, \"Page size must be at most 100.\""
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Hotel search",
+			"description": "Destination, stars, amenity, dates and guests.",
+			"item": [
+				{
+					"name": "Search - by destination",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const hotels = pm.response.json().data;",
+									"",
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Two hotels, both in Kyoto', () => {",
+									"  pm.expect(hotels).to.have.lengthOf(2);",
+									"  pm.expect(hotels.every((hotel) => hotel.city === 'Kyoto')).to.eql(true);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hotels?destination=Kyoto",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hotels"
+							],
+							"query": [
+								{
+									"key": "destination",
+									"value": "Kyoto"
+								}
+							]
+						},
+						"description": "Expected: the two hotels in Kyoto, and only those."
+					},
+					"response": []
+				},
+				{
+					"name": "Search - 4 stars or more with a pool",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const hotels = pm.response.json().data;",
+									"",
+									"pm.test('Status is 200 OK and hotels are found', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(hotels.length).to.be.above(0);",
+									"});",
+									"",
+									"pm.test('Every hotel matches both filters', () => {",
+									"  for (const hotel of hotels) {",
+									"    pm.expect(hotel.starRating, hotel.name).to.be.at.least(4);",
+									"    pm.expect(hotel.amenities, hotel.name).to.include('Pool');",
+									"  }",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hotels?minStars=4&amenity=Pool",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hotels"
+							],
+							"query": [
+								{
+									"key": "minStars",
+									"value": "4"
+								},
+								{
+									"key": "amenity",
+									"value": "Pool"
+								}
+							]
+						},
+						"description": "Expected: at least one hotel, each with 4+ stars and a pool."
+					},
+					"response": []
+				},
+				{
+					"name": "Search - 5 stars (the maximum)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and every hotel has 5 stars', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.every((hotel) => hotel.starRating === 5)).to.eql(true);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hotels?minStars=5",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hotels"
+							],
+							"query": [
+								{
+									"key": "minStars",
+									"value": "5"
+								}
+							]
+						},
+						"description": "Boundary test. Expected: 200 OK, every hotel 5 stars."
+					},
+					"response": []
+				},
+				{
+					"name": "Search - 7 stars is refused (above the maximum)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on minStars', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'minStars');",
+									"  pm.expect(detail, 'a field error for minStars').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Star rating must be from 1 to 5.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hotels?minStars=7",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hotels"
+							],
+							"query": [
+								{
+									"key": "minStars",
+									"value": "7"
+								}
+							]
+						},
+						"description": "Boundary test. Expected: 400, \"Star rating must be from 1 to 5.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Search - a destination with no hotels",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK with no hotels', () => {",
+									"  pm.response.to.have.status(200);",
+									"  const { data: hotels, meta } = pm.response.json();",
+									"  pm.expect(hotels).to.have.lengthOf(0);",
+									"  pm.expect(meta.totalItems).to.eql(0);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hotels?destination=Atlantis",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hotels"
+							],
+							"query": [
+								{
+									"key": "destination",
+									"value": "Atlantis"
+								}
+							]
+						},
+						"description": "Expected: 200 OK and an empty list."
+					},
+					"response": []
+				},
+				{
+					"name": "Search - with dates and guests",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Random dates 400 to 700 days ahead, so the room is free and other runs pick other dates.",
+									"const day = 24 * 60 * 60 * 1000;",
+									"const start = 400 + Math.floor(Math.random() * 300);",
+									"const iso = (offset) => new Date(Date.now() + offset * day).toISOString().slice(0, 10);",
+									"pm.collectionVariables.set('searchCheckIn', iso(start));",
+									"pm.collectionVariables.set('searchCheckOut', iso(start + 2));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const hotels = pm.response.json().data;",
+									"",
+									"pm.test('Status is 200 OK and hotels in Lisbon are found', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(hotels.length).to.be.above(0);",
+									"  pm.expect(hotels.every((hotel) => hotel.city === 'Lisbon')).to.eql(true);",
+									"});",
+									"",
+									"pm.test('Each hotel says how many rooms match the stay', () => {",
+									"  for (const hotel of hotels) pm.expect(hotel.matchingRooms, hotel.name).to.be.a('number').and.above(0);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hotels?destination=Lisbon&checkIn={{searchCheckIn}}&checkOut={{searchCheckOut}}&guests=2",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hotels"
+							],
+							"query": [
+								{
+									"key": "destination",
+									"value": "Lisbon"
+								},
+								{
+									"key": "checkIn",
+									"value": "{{searchCheckIn}}"
+								},
+								{
+									"key": "checkOut",
+									"value": "{{searchCheckOut}}"
+								},
+								{
+									"key": "guests",
+									"value": "2"
+								}
+							]
+						},
+						"description": "Free far-future dates. Expected: hotels in Lisbon, each with rooms that match."
+					},
+					"response": []
+				},
+				{
+					"name": "Search - a check-in date in the past is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on checkIn', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'checkIn');",
+									"  pm.expect(detail, 'a field error for checkIn').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Check-in cannot be in the past.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hotels?checkIn=2020-01-01&checkOut=2020-01-03",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hotels"
+							],
+							"query": [
+								{
+									"key": "checkIn",
+									"value": "2020-01-01"
+								},
+								{
+									"key": "checkOut",
+									"value": "2020-01-03"
+								}
+							]
+						},
+						"description": "Expected: 400, \"Check-in cannot be in the past.\""
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Hotel details",
+			"description": "One hotel with its rooms.",
+			"item": [
+				{
+					"name": "Hotel details - with its rooms",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response matches the HotelDetail schema', () => {",
+									"  const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+									"  pm.response.to.have.jsonSchema(schemas.HotelDetail_one);",
+									"});",
+									"",
+									"pm.test('The hotel has its three rooms', () => {",
+									"  const hotel = pm.response.json().data;",
+									"  pm.expect(hotel.id).to.eql('hotel_0002');",
+									"  pm.expect(hotel.rooms.map((room) => room.id).sort()).to.eql(['room_0002_dlx', 'room_0002_fam', 'room_0002_std']);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hotels/hotel_0002",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hotels",
+								"hotel_0002"
+							]
+						},
+						"description": "Expected: 200 OK, a HotelDetail with its three rooms."
+					},
+					"response": []
+				},
+				{
+					"name": "Hotel details - an unknown hotel",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', () => {",
+									"  pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test('Error code is HOTEL_NOT_FOUND', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('HOTEL_NOT_FOUND');",
+									"  pm.expect(error.message).to.eql(\"Hotel not found.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hotels/hotel_9999",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hotels",
+								"hotel_9999"
+							]
+						},
+						"description": "Expected: 404, HOTEL_NOT_FOUND."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Room availability",
+			"description": "Whether a room is free for a stay, and the stay rules.",
+			"item": [
+				{
+					"name": "Room - available on free dates",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Random dates 400 to 700 days ahead, so the room is free and other runs pick other dates.",
+									"const day = 24 * 60 * 60 * 1000;",
+									"const start = 400 + Math.floor(Math.random() * 300);",
+									"const iso = (offset) => new Date(Date.now() + offset * day).toISOString().slice(0, 10);",
+									"pm.collectionVariables.set('stayCheckIn', iso(start));",
+									"pm.collectionVariables.set('stayCheckOut', iso(start + 2));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response matches the Room schema', () => {",
+									"  const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+									"  pm.response.to.have.jsonSchema(schemas.Room_one);",
+									"});",
+									"",
+									"const room = pm.response.json().data;",
+									"pm.collectionVariables.set('roomRate', String(room.pricePerNightCents));",
+									"",
+									"pm.test('The room is available', () => {",
+									"  pm.expect(room.available).to.eql(true);",
+									"  pm.expect(room.availableRooms).to.be.above(0);",
+									"});",
+									"",
+									"pm.test('2 nights at the nightly rate', () => {",
+									"  pm.expect(room.nights).to.eql(2);",
+									"  pm.expect(room.stayTotalCents).to.eql(2 * room.pricePerNightCents);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/rooms/room_0002_std?checkIn={{stayCheckIn}}&checkOut={{stayCheckOut}}&guests=2",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rooms",
+								"room_0002_std"
+							],
+							"query": [
+								{
+									"key": "checkIn",
+									"value": "{{stayCheckIn}}"
+								},
+								{
+									"key": "checkOut",
+									"value": "{{stayCheckOut}}"
+								},
+								{
+									"key": "guests",
+									"value": "2"
+								}
+							]
+						},
+						"description": "A 2-night stay on free dates. Expected: 200 OK, available, total = 2 x the nightly rate."
+					},
+					"response": []
+				},
+				{
+					"name": "Room - without dates there is no availability",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and availability is not given', () => {",
+									"  pm.response.to.have.status(200);",
+									"  const room = pm.response.json().data;",
+									"  pm.expect(room.available).to.eql(null);",
+									"  pm.expect(room.availableRooms).to.eql(null);",
+									"  pm.expect(room.nights).to.eql(null);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/rooms/room_0002_std",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rooms",
+								"room_0002_std"
+							]
+						},
+						"description": "Expected: 200 OK, and availability and stay fields are null."
+					},
+					"response": []
+				},
+				{
+					"name": "Room - a 30-night stay (the maximum)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Random dates 400 to 700 days ahead, so the room is free and other runs pick other dates.",
+									"const day = 24 * 60 * 60 * 1000;",
+									"const start = 400 + Math.floor(Math.random() * 300);",
+									"const iso = (offset) => new Date(Date.now() + offset * day).toISOString().slice(0, 10);",
+									"pm.collectionVariables.set('longCheckIn', iso(start));",
+									"pm.collectionVariables.set('longCheckOut', iso(start + 30));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and the stay is 30 nights', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.nights).to.eql(30);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/rooms/room_0002_std?checkIn={{longCheckIn}}&checkOut={{longCheckOut}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rooms",
+								"room_0002_std"
+							],
+							"query": [
+								{
+									"key": "checkIn",
+									"value": "{{longCheckIn}}"
+								},
+								{
+									"key": "checkOut",
+									"value": "{{longCheckOut}}"
+								}
+							]
+						},
+						"description": "Boundary test. Expected: 200 OK and 30 nights."
+					},
+					"response": []
+				},
+				{
+					"name": "Room - a 31-night stay is refused (above the maximum)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Random dates 400 to 700 days ahead, so the room is free and other runs pick other dates.",
+									"const day = 24 * 60 * 60 * 1000;",
+									"const start = 400 + Math.floor(Math.random() * 300);",
+									"const iso = (offset) => new Date(Date.now() + offset * day).toISOString().slice(0, 10);",
+									"pm.collectionVariables.set('tooLongCheckIn', iso(start));",
+									"pm.collectionVariables.set('tooLongCheckOut', iso(start + 31));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on checkOut', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'checkOut');",
+									"  pm.expect(detail, 'a field error for checkOut').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"A stay can be at most 30 nights.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/rooms/room_0002_std?checkIn={{tooLongCheckIn}}&checkOut={{tooLongCheckOut}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rooms",
+								"room_0002_std"
+							],
+							"query": [
+								{
+									"key": "checkIn",
+									"value": "{{tooLongCheckIn}}"
+								},
+								{
+									"key": "checkOut",
+									"value": "{{tooLongCheckOut}}"
+								}
+							]
+						},
+						"description": "Boundary test. Expected: 400, \"A stay can be at most 30 nights.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Room - check-out before check-in is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on checkOut', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'checkOut');",
+									"  pm.expect(detail, 'a field error for checkOut').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Check-out must be after check-in.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/rooms/room_0002_std?checkIn=2031-05-10&checkOut=2031-05-08",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rooms",
+								"room_0002_std"
+							],
+							"query": [
+								{
+									"key": "checkIn",
+									"value": "2031-05-10"
+								},
+								{
+									"key": "checkOut",
+									"value": "2031-05-08"
+								}
+							]
+						},
+						"description": "Expected: 400, \"Check-out must be after check-in.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Room - only a check-in date is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('The error asks for both dates', () => {",
+									"  const messages = pm.response.json().error.details.map((detail) => detail.message);",
+									"  pm.expect(messages).to.include('Provide both check-in and check-out dates.');",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/rooms/room_0002_std?checkIn=2031-05-10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rooms",
+								"room_0002_std"
+							],
+							"query": [
+								{
+									"key": "checkIn",
+									"value": "2031-05-10"
+								}
+							]
+						},
+						"description": "Expected: 400, \"Provide both check-in and check-out dates.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Room - an unknown room",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', () => {",
+									"  pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test('Error code is ROOM_NOT_FOUND', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('ROOM_NOT_FOUND');",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/rooms/room_9999",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rooms",
+								"room_9999"
+							]
+						},
+						"description": "Expected: 404, ROOM_NOT_FOUND."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Booking creation",
+			"description": "Booking rooms, including a sold-out room and the stay limits.",
+			"item": [
+				{
+					"name": "Book a room",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201 Created', () => {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response matches the Booking schema', () => {",
+									"  const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+									"  pm.response.to.have.jsonSchema(schemas.Booking_one);",
+									"});",
+									"",
+									"const booking = pm.response.json().data;",
+									"pm.collectionVariables.set('bookingId', booking.id);",
+									"",
+									"pm.test('A confirmed booking for the requested stay', () => {",
+									"  pm.expect(booking.status).to.eql('CONFIRMED');",
+									"  pm.expect(booking.checkIn).to.eql(pm.collectionVariables.get('stayCheckIn'));",
+									"  pm.expect(booking.checkOut).to.eql(pm.collectionVariables.get('stayCheckOut'));",
+									"  pm.expect(booking.leadGuestName).to.eql('Newman Tester');",
+									"});",
+									"",
+									"pm.test('2 nights at the nightly rate', () => {",
+									"  pm.expect(booking.nights).to.eql(2);",
+									"  pm.expect(booking.totalCents).to.eql(2 * Number(pm.collectionVariables.get('roomRate')));",
+									"});",
+									"",
+									"pm.test('A booking number is given', () => {",
+									"  pm.expect(booking.bookingNumber).to.match(/^BKG-/);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"roomId\": \"room_0002_std\",\n  \"checkIn\": \"{{stayCheckIn}}\",\n  \"checkOut\": \"{{stayCheckOut}}\",\n  \"guests\": 2,\n  \"leadGuestName\": \"Newman Tester\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Books room_0002_std for the 2 nights checked above. It is cancelled later in this collection.\nExpected: 201 Created, a CONFIRMED Booking, total = 2 x the nightly rate."
+					},
+					"response": []
+				},
+				{
+					"name": "Book - more guests than the room sleeps is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', () => {",
+									"  pm.response.to.have.status(422);",
+									"});",
+									"",
+									"pm.test('Error code is GUEST_LIMIT_EXCEEDED', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('GUEST_LIMIT_EXCEEDED');",
+									"  pm.expect(error.message).to.eql(\"This room sleeps at most 2 guests.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"roomId\": \"room_0002_std\",\n  \"checkIn\": \"{{stayCheckIn}}\",\n  \"checkOut\": \"{{stayCheckOut}}\",\n  \"guests\": 3,\n  \"leadGuestName\": \"Newman Tester\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "room_0002_std sleeps 2; this asks for 3 (boundary). Expected: 422, GUEST_LIMIT_EXCEEDED."
+					},
+					"response": []
+				},
+				{
+					"name": "Book - dates in the past are refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on checkIn', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'checkIn');",
+									"  pm.expect(detail, 'a field error for checkIn').to.exist;",
+									"  pm.expect(detail.message).to.eql(\"Check-in cannot be in the past.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"roomId\": \"room_0002_std\",\n  \"checkIn\": \"2020-01-01\",\n  \"checkOut\": \"2020-01-03\",\n  \"guests\": 1,\n  \"leadGuestName\": \"Newman Tester\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 400, \"Check-in cannot be in the past.\""
+					},
+					"response": []
+				},
+				{
+					"name": "Book - the lead guest name is required",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on leadGuestName', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  const detail = error.details.find((item) => item.field === 'leadGuestName');",
+									"  pm.expect(detail, 'a field error for leadGuestName').to.exist;",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"roomId\": \"room_0002_std\",\n  \"checkIn\": \"{{stayCheckIn}}\",\n  \"checkOut\": \"{{stayCheckOut}}\",\n  \"guests\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Required field test. Expected: 400 on leadGuestName."
+					},
+					"response": []
+				},
+				{
+					"name": "Book - the only room of its kind",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Random dates 400 to 700 days ahead, so the room is free and other runs pick other dates.",
+									"const day = 24 * 60 * 60 * 1000;",
+									"const start = 400 + Math.floor(Math.random() * 300);",
+									"const iso = (offset) => new Date(Date.now() + offset * day).toISOString().slice(0, 10);",
+									"pm.collectionVariables.set('soloCheckIn', iso(start));",
+									"pm.collectionVariables.set('soloCheckOut', iso(start + 2));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201 Created', () => {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.collectionVariables.set('soloBookingId', pm.response.json().data.id);"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"roomId\": \"room_0012_std\",\n  \"checkIn\": \"{{soloCheckIn}}\",\n  \"checkOut\": \"{{soloCheckOut}}\",\n  \"guests\": 1,\n  \"leadGuestName\": \"Newman Tester\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "room_0012_std has a single unit, so this booking sells it out for these dates. Expected: 201 Created."
+					},
+					"response": []
+				},
+				{
+					"name": "Room - now sold out for those dates",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and the room is sold out', () => {",
+									"  pm.response.to.have.status(200);",
+									"  const room = pm.response.json().data;",
+									"  pm.expect(room.available).to.eql(false);",
+									"  pm.expect(room.availableRooms).to.eql(0);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/rooms/room_0012_std?checkIn={{soloCheckIn}}&checkOut={{soloCheckOut}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rooms",
+								"room_0012_std"
+							],
+							"query": [
+								{
+									"key": "checkIn",
+									"value": "{{soloCheckIn}}"
+								},
+								{
+									"key": "checkOut",
+									"value": "{{soloCheckOut}}"
+								}
+							]
+						},
+						"description": "Expected: available false and 0 rooms left."
+					},
+					"response": []
+				},
+				{
+					"name": "Book - the same sold-out room again is refused (duplicate request)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 409', () => {",
+									"  pm.response.to.have.status(409);",
+									"});",
+									"",
+									"pm.test('Error code is ROOM_UNAVAILABLE', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('ROOM_UNAVAILABLE');",
+									"  pm.expect(error.message).to.eql(\"This room is not available for the selected dates.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"roomId\": \"room_0012_std\",\n  \"checkIn\": \"{{soloCheckIn}}\",\n  \"checkOut\": \"{{soloCheckOut}}\",\n  \"guests\": 1,\n  \"leadGuestName\": \"Newman Tester\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 409, ROOM_UNAVAILABLE."
+					},
+					"response": []
+				},
+				{
+					"name": "Book - a 30-night stay (the maximum)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Random dates 400 to 700 days ahead, so the room is free and other runs pick other dates.",
+									"const day = 24 * 60 * 60 * 1000;",
+									"const start = 400 + Math.floor(Math.random() * 300);",
+									"const iso = (offset) => new Date(Date.now() + offset * day).toISOString().slice(0, 10);",
+									"pm.collectionVariables.set('longBookingCheckIn', iso(start));",
+									"pm.collectionVariables.set('longBookingCheckOut', iso(start + 30));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201 Created with 30 nights', () => {",
+									"  pm.response.to.have.status(201);",
+									"  pm.expect(pm.response.json().data.nights).to.eql(30);",
+									"});",
+									"",
+									"pm.collectionVariables.set('longBookingId', pm.response.json().data.id);"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"roomId\": \"room_0002_dlx\",\n  \"checkIn\": \"{{longBookingCheckIn}}\",\n  \"checkOut\": \"{{longBookingCheckOut}}\",\n  \"guests\": 1,\n  \"leadGuestName\": \"Newman Tester\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Boundary test. Expected: 201 Created and 30 nights. Cancelled later in this collection."
+					},
+					"response": []
+				},
+				{
+					"name": "Book - needs the Travel module",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 403', () => {",
+									"  pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.test('Error code is MODULE_NOT_ALLOWED', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('MODULE_NOT_ALLOWED');",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_ecommerce}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"roomId\": \"room_0002_std\",\n  \"checkIn\": \"{{stayCheckIn}}\",\n  \"checkOut\": \"{{stayCheckOut}}\",\n  \"guests\": 1,\n  \"leadGuestName\": \"Newman Tester\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Authorization test with an E-commerce token. Expected: 403, MODULE_NOT_ALLOWED."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Booking details",
+			"description": "Reading bookings.",
+			"item": [
+				{
+					"name": "Booking details - the new booking",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('It is the booking just made', () => {",
+									"  pm.expect(pm.response.json().data.id).to.eql(pm.collectionVariables.get('bookingId'));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings",
+								"{{bookingId}}"
+							]
+						},
+						"description": "Expected: 200 OK and the booking just made."
+					},
+					"response": []
+				},
+				{
+					"name": "Booking details - my bookings, latest stay first",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response matches the Booking page schema', () => {",
+									"  const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+									"  pm.response.to.have.jsonSchema(schemas.Booking_page);",
+									"});",
+									"",
+									"const bookings = pm.response.json().data;",
+									"",
+									"pm.test('Sorted by check-in date, latest first', () => {",
+									"  const dates = bookings.map((booking) => booking.checkIn);",
+									"  pm.expect(dates).to.eql([...dates].sort().reverse());",
+									"});",
+									"",
+									"pm.test('Every booking belongs to the same customer', () => {",
+									"  pm.expect(new Set(bookings.map((booking) => booking.userId)).size).to.be.at.most(1);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings?pageSize=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings"
+							],
+							"query": [
+								{
+									"key": "pageSize",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Expected: a Booking page sorted by check-in date, latest first, with only my bookings."
+					},
+					"response": []
+				},
+				{
+					"name": "Booking details - CONFIRMED bookings include the new one",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const bookings = pm.response.json().data;",
+									"",
+									"pm.test('Status is 200 OK and every booking is CONFIRMED', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(bookings.every((booking) => booking.status === 'CONFIRMED')).to.eql(true);",
+									"});",
+									"",
+									"pm.test('The new booking is listed', () => {",
+									"  pm.expect(bookings.map((booking) => booking.id)).to.include(pm.collectionVariables.get('bookingId'));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings?status=CONFIRMED&pageSize=100",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "CONFIRMED"
+								},
+								{
+									"key": "pageSize",
+									"value": "100"
+								}
+							]
+						},
+						"description": "Expected: only CONFIRMED bookings, including the booking just made."
+					},
+					"response": []
+				},
+				{
+					"name": "Booking details - another customer's booking is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 403', () => {",
+									"  pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.test('Error code is FORBIDDEN', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('FORBIDDEN');",
+									"  pm.expect(error.message).to.eql(\"This booking belongs to another user.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings/booking_0004",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings",
+								"booking_0004"
+							]
+						},
+						"description": "booking_0004 belongs to Bob. Authorization test. Expected: 403, FORBIDDEN."
+					},
+					"response": []
+				},
+				{
+					"name": "Booking details - an unknown booking",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', () => {",
+									"  pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test('Error code is BOOKING_NOT_FOUND', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('BOOKING_NOT_FOUND');",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings/booking_nope",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings",
+								"booking_nope"
+							]
+						},
+						"description": "Expected: 404, BOOKING_NOT_FOUND."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Booking cancellation",
+			"description": "Cancelling, and cleaning up every booking made above.",
+			"item": [
+				{
+					"name": "Cancel the booking",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and the booking is CANCELLED', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.status).to.eql('CANCELLED');",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings/{{bookingId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings",
+								"{{bookingId}}",
+								"cancel"
+							]
+						},
+						"description": "Expected: 200 OK and status CANCELLED."
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel - again is refused (duplicate request)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 409', () => {",
+									"  pm.response.to.have.status(409);",
+									"});",
+									"",
+									"pm.test('Error code is BOOKING_NOT_CANCELLABLE', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('BOOKING_NOT_CANCELLABLE');",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings/{{bookingId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings",
+								"{{bookingId}}",
+								"cancel"
+							]
+						},
+						"description": "Expected: 409, BOOKING_NOT_CANCELLABLE."
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel - a stay that has already started is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 409', () => {",
+									"  pm.response.to.have.status(409);",
+									"});",
+									"",
+									"pm.test('Error code is BOOKING_NOT_CANCELLABLE', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('BOOKING_NOT_CANCELLABLE');",
+									"  pm.expect(error.message).to.eql(\"Only confirmed bookings that have not started can be cancelled.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings/booking_0002/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings",
+								"booking_0002",
+								"cancel"
+							]
+						},
+						"description": "booking_0002 is the test customer's stay from 2024. Expected: 409, BOOKING_NOT_CANCELLABLE."
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel the sold-out room booking (clean-up)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and the booking is CANCELLED', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.status).to.eql('CANCELLED');",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings/{{soloBookingId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings",
+								"{{soloBookingId}}",
+								"cancel"
+							]
+						},
+						"description": "Expected: 200 OK and CANCELLED."
+					},
+					"response": []
+				},
+				{
+					"name": "Room - available again after the cancellation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and the room is available', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.available).to.eql(true);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/rooms/room_0012_std?checkIn={{soloCheckIn}}&checkOut={{soloCheckOut}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rooms",
+								"room_0012_std"
+							],
+							"query": [
+								{
+									"key": "checkIn",
+									"value": "{{soloCheckIn}}"
+								},
+								{
+									"key": "checkOut",
+									"value": "{{soloCheckOut}}"
+								}
+							]
+						},
+						"description": "Expected: available true again."
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel the 30-night booking (clean-up)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and the booking is CANCELLED', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.status).to.eql('CANCELLED');",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_travel}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings/{{longBookingId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings",
+								"{{longBookingId}}",
+								"cancel"
+							]
+						},
+						"description": "Expected: 200 OK and CANCELLED."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Known defects",
+			"description": "Genuine application defects. These tests fail until the application is fixed. See DEFECTS.md.",
+			"item": [
+				{
+					"name": "[DEFECT-001] Room availability ignores the number of guests",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('[DEFECT-001] A room for 2 is not available for 9 guests', () => {",
+									"  const room = pm.response.json().data;",
+									"  pm.expect(room.maxGuests).to.eql(2);",
+									"  pm.expect(room.available, 'available for 9 guests').to.eql(false);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/rooms/room_0002_std?checkIn={{stayCheckIn}}&checkOut={{stayCheckOut}}&guests=9",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rooms",
+								"room_0002_std"
+							],
+							"query": [
+								{
+									"key": "checkIn",
+									"value": "{{stayCheckIn}}"
+								},
+								{
+									"key": "checkOut",
+									"value": "{{stayCheckOut}}"
+								},
+								{
+									"key": "guests",
+									"value": "9"
+								}
+							]
+						},
+						"description": "See DEFECTS.md, DEFECT-001. room_0002_std sleeps 2 guests. Asked for 9 guests, the API should say\nthe room is not available (or refuse the query), because booking it with 9 guests is refused with\n422 GUEST_LIMIT_EXCEEDED. It answers available: true instead.\n\nThis test is expected to FAIL until the application is fixed."
+					},
+					"response": []
+				},
+				{
+					"name": "[DEFECT-002] Hotel details leave out fields the API documentation promises",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('[DEFECT-002] Hotel details include fromPriceCents and matchingRooms', () => {",
+									"  const hotel = pm.response.json().data;",
+									"  pm.expect(hotel).to.have.property('fromPriceCents');",
+									"  pm.expect(hotel).to.have.property('matchingRooms');",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hotels/hotel_0002",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hotels",
+								"hotel_0002"
+							]
+						},
+						"description": "See DEFECTS.md, DEFECT-002. The OpenAPI document defines HotelDetail as HotelSummary plus rooms,\nso it promises fromPriceCents and matchingRooms. GET /hotels/{id} does not return them.\n\nThis test is expected to FAIL until the application or its documentation is fixed."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"/*",
+					" * DYNAMIC TOKEN HANDLING (runs before every request in this collection)",
+					" *",
+					" * A request that needs a session sends the header",
+					" *     Authorization: Bearer {{token_<module>}}",
+					" * where <module> is ecommerce, banking, travel or admin. Each sign-in opens one module, so",
+					" * there is one token per module.",
+					" *",
+					" * This script looks at that header. If the token for that module is missing, or expires within",
+					" * a minute, it signs in first with pm.sendRequest, using the credentials from the environment",
+					" * (testUsername/testPassword, or adminUsername/adminPassword for admin), and saves the token",
+					" * and its expiry time as collection variables. Postman waits for the sign-in to finish before",
+					" * it sends the request itself.",
+					" *",
+					" * Requests in this collection have Settings > \"Disable cookie jar\" on, so they authenticate with",
+					" * the Bearer token only. pm.sendRequest still uses the cookie jar, so after each sign-in this",
+					" * script clears the session cookie it received.",
+					" */",
+					"const header = pm.request.headers.get('Authorization') || '';",
+					"const wanted = header.match(/\\{\\{token_(ecommerce|banking|travel|admin)\\}\\}/);",
+					"",
+					"if (wanted) {",
+					"  const module = wanted[1];",
+					"  const tokenKey = `token_${module}`;",
+					"  const expiresKey = `token_${module}_expires`;",
+					"  const expiresAt = Number(pm.collectionVariables.get(expiresKey) || 0);",
+					"  const stillValid = pm.collectionVariables.get(tokenKey) && Date.now() < expiresAt - 60 * 1000;",
+					"",
+					"  if (!stillValid) {",
+					"    const admin = module === 'admin';",
+					"    const email = pm.environment.get(admin ? 'adminUsername' : 'testUsername');",
+					"    const password = pm.environment.get(admin ? 'adminPassword' : 'testPassword');",
+					"    if (!email || !password) {",
+					"      throw new Error(",
+					"        `Set ${admin ? 'adminUsername and adminPassword' : 'testUsername and testPassword'} in the selected environment (Current value).`,",
+					"      );",
+					"    }",
+					"",
+					"    pm.sendRequest(",
+					"      {",
+					"        url: `${pm.environment.get('baseUrl')}/auth/login`,",
+					"        method: 'POST',",
+					"        header: { 'Content-Type': 'application/json' },",
+					"        body: { mode: 'raw', raw: JSON.stringify({ email, password, module }) },",
+					"      },",
+					"      (error, response) => {",
+					"        if (error || response.code !== 200) {",
+					"          throw new Error(`Automatic sign-in to ${module} failed: ${error ? error.message : `${response.code} ${response.text()}`}`);",
+					"        }",
+					"        const { token, expiresIn } = response.json().data;",
+					"        pm.collectionVariables.set(tokenKey, token);",
+					"        pm.collectionVariables.set(expiresKey, String(Date.now() + expiresIn * 1000));",
+					"",
+					"        // The sign-in also stored the app's session cookie. If it stayed, the next automatic",
+					"        // sign-in would send it, and the app would end that session (and so this token).",
+					"        pm.cookies.jar().clear(pm.environment.get('baseUrl'), (clearError) => {",
+					"          if (clearError) {",
+					"            console.warn(",
+					"              'Could not clear the session cookie. In Postman, open Cookies > Domains Allowlist and add the API domain ' +",
+					"                '(for example quality-lab-jb.vercel.app), or tokens of other modules may stop working.',",
+					"            );",
+					"          }",
+					"        });",
+					"      },",
+					"    );",
+					"  }",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"/*",
+					" * CHECKS FOR EVERY RESPONSE (run after every request in this collection)",
+					" * Each request's own Tests tab adds the checks for that request.",
+					" */",
+					"pm.test('[every response] no server error (status below 500)', () => {",
+					"  pm.expect(pm.response.code).to.be.below(500);",
+					"});",
+					"",
+					"pm.test('[every response] answered within 20 seconds', () => {",
+					"  pm.expect(pm.response.responseTime).to.be.below(20000);",
+					"});",
+					"",
+					"pm.test('[every response] carries an x-request-id header', () => {",
+					"  pm.response.to.have.header('x-request-id');",
+					"});",
+					"",
+					"if (pm.response.code !== 204) {",
+					"  pm.test('[every response] body is JSON', () => {",
+					"    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+					"  });",
+					"}",
+					"",
+					"// Every error uses the same shape: { error: { code, message, details?, requestId } }.",
+					"if (pm.response.code >= 400) {",
+					"  pm.test('[every response] error body matches the ErrorResponse schema', () => {",
+					"    const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+					"    pm.response.to.have.jsonSchema(schemas.ErrorResponse);",
+					"  });",
+					"}"
+				]
+			}
+		}
+	],
+	"protocolProfileBehavior": {
+		"disableCookies": true
+	},
+	"variable": [
+		{
+			"key": "schemas",
+			"value": "{\"User_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"email\":{\"type\":\"string\"},\"firstName\":{\"type\":\"string\"},\"lastName\":{\"type\":\"string\"},\"role\":{\"type\":\"string\",\"enum\":[\"CUSTOMER\",\"ADMIN\"]},\"status\":{\"type\":\"string\",\"enum\":[\"ACTIVE\",\"DISABLED\"]},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"email\",\"firstName\",\"lastName\",\"role\",\"status\",\"createdAt\"]}}},\"LoginResult_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"token\":{\"type\":\"string\"},\"tokenType\":{\"type\":\"string\"},\"expiresIn\":{\"type\":\"integer\"},\"module\":{\"type\":\"string\",\"enum\":[\"ecommerce\",\"banking\",\"travel\",\"admin\"]},\"user\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"email\":{\"type\":\"string\"},\"firstName\":{\"type\":\"string\"},\"lastName\":{\"type\":\"string\"},\"role\":{\"type\":\"string\",\"enum\":[\"CUSTOMER\",\"ADMIN\"]},\"status\":{\"type\":\"string\",\"enum\":[\"ACTIVE\",\"DISABLED\"]},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"email\",\"firstName\",\"lastName\",\"role\",\"status\",\"createdAt\"]}},\"required\":[\"token\",\"tokenType\",\"expiresIn\",\"module\",\"user\"]}}},\"Product_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"category\":{\"type\":\"string\"},\"brand\":{\"type\":\"string\"},\"priceCents\":{\"type\":\"integer\"},\"listPriceCents\":{\"type\":[\"integer\",\"null\"]},\"onSale\":{\"type\":\"boolean\"},\"discountPercent\":{\"type\":[\"integer\",\"null\"]},\"stock\":{\"type\":\"integer\"},\"inStock\":{\"type\":\"boolean\"},\"rating\":{\"type\":\"number\"},\"imageUrl\":{\"type\":[\"string\",\"null\"]},\"isActive\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"updatedAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"sku\",\"name\",\"description\",\"category\",\"brand\",\"priceCents\",\"listPriceCents\",\"onSale\",\"discountPercent\",\"stock\",\"inStock\",\"rating\",\"imageUrl\",\"isActive\",\"createdAt\",\"updatedAt\"]}}},\"Product_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"category\":{\"type\":\"string\"},\"brand\":{\"type\":\"string\"},\"priceCents\":{\"type\":\"integer\"},\"listPriceCents\":{\"type\":[\"integer\",\"null\"]},\"onSale\":{\"type\":\"boolean\"},\"discountPercent\":{\"type\":[\"integer\",\"null\"]},\"stock\":{\"type\":\"integer\"},\"inStock\":{\"type\":\"boolean\"},\"rating\":{\"type\":\"number\"},\"imageUrl\":{\"type\":[\"string\",\"null\"]},\"isActive\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"updatedAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"sku\",\"name\",\"description\",\"category\",\"brand\",\"priceCents\",\"listPriceCents\",\"onSale\",\"discountPercent\",\"stock\",\"inStock\",\"rating\",\"imageUrl\",\"isActive\",\"createdAt\",\"updatedAt\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"Cart_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"productId\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"unitPriceCents\":{\"type\":\"integer\"},\"quantity\":{\"type\":\"integer\"},\"lineTotalCents\":{\"type\":\"integer\"},\"availableStock\":{\"type\":\"integer\"}},\"required\":[\"productId\",\"sku\",\"name\",\"unitPriceCents\",\"quantity\",\"lineTotalCents\",\"availableStock\"]}},\"itemCount\":{\"type\":\"integer\"},\"subtotalCents\":{\"type\":\"integer\"},\"taxCents\":{\"type\":\"integer\"},\"shippingCents\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"}},\"required\":[\"items\",\"itemCount\",\"subtotalCents\",\"taxCents\",\"shippingCents\",\"totalCents\"]}}},\"Order_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"orderNumber\":{\"type\":\"string\"},\"userId\":{\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"PAID\",\"SHIPPED\",\"DELIVERED\",\"CANCELLED\"]},\"paymentStatus\":{\"type\":\"string\",\"enum\":[\"CAPTURED\",\"REFUNDED\"]},\"subtotalCents\":{\"type\":\"integer\"},\"taxCents\":{\"type\":\"integer\"},\"shippingCents\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"},\"shipping\":{\"type\":\"object\",\"properties\":{\"fullName\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"postcode\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"}},\"required\":[\"fullName\",\"address\",\"city\",\"postcode\",\"country\"]},\"payment\":{\"type\":\"object\",\"properties\":{\"cardBrand\":{\"type\":\"string\"},\"cardLast4\":{\"type\":\"string\"}},\"required\":[\"cardBrand\",\"cardLast4\"]},\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"productId\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"unitPriceCents\":{\"type\":\"integer\"},\"quantity\":{\"type\":\"integer\"},\"lineTotalCents\":{\"type\":\"integer\"}},\"required\":[\"productId\",\"sku\",\"name\",\"unitPriceCents\",\"quantity\",\"lineTotalCents\"]}},\"canCancel\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"cancelledAt\":{\"type\":[\"string\",\"null\"],\"format\":\"date-time\"}},\"required\":[\"id\",\"orderNumber\",\"userId\",\"status\",\"paymentStatus\",\"subtotalCents\",\"taxCents\",\"shippingCents\",\"totalCents\",\"shipping\",\"payment\",\"items\",\"canCancel\",\"createdAt\",\"cancelledAt\"]}}},\"Order_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"orderNumber\":{\"type\":\"string\"},\"userId\":{\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"PAID\",\"SHIPPED\",\"DELIVERED\",\"CANCELLED\"]},\"paymentStatus\":{\"type\":\"string\",\"enum\":[\"CAPTURED\",\"REFUNDED\"]},\"subtotalCents\":{\"type\":\"integer\"},\"taxCents\":{\"type\":\"integer\"},\"shippingCents\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"},\"shipping\":{\"type\":\"object\",\"properties\":{\"fullName\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"postcode\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"}},\"required\":[\"fullName\",\"address\",\"city\",\"postcode\",\"country\"]},\"payment\":{\"type\":\"object\",\"properties\":{\"cardBrand\":{\"type\":\"string\"},\"cardLast4\":{\"type\":\"string\"}},\"required\":[\"cardBrand\",\"cardLast4\"]},\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"productId\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"unitPriceCents\":{\"type\":\"integer\"},\"quantity\":{\"type\":\"integer\"},\"lineTotalCents\":{\"type\":\"integer\"}},\"required\":[\"productId\",\"sku\",\"name\",\"unitPriceCents\",\"quantity\",\"lineTotalCents\"]}},\"canCancel\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"cancelledAt\":{\"type\":[\"string\",\"null\"],\"format\":\"date-time\"}},\"required\":[\"id\",\"orderNumber\",\"userId\",\"status\",\"paymentStatus\",\"subtotalCents\",\"taxCents\",\"shippingCents\",\"totalCents\",\"shipping\",\"payment\",\"items\",\"canCancel\",\"createdAt\",\"cancelledAt\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"BankAccount_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"accountNumber\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"CHECKING\",\"SAVINGS\",\"TIME_DEPOSIT\"]},\"product\":{\"type\":[\"string\",\"null\"],\"enum\":[\"STARTER_SAVINGS\",\"EVERYDAY_CHECKING\",\"TIME_DEPOSIT\",null]},\"productName\":{\"type\":[\"string\",\"null\"]},\"status\":{\"type\":\"string\",\"enum\":[\"ACTIVE\",\"FROZEN\"]},\"currency\":{\"type\":\"string\"},\"balanceCents\":{\"type\":\"integer\"},\"termMonths\":{\"type\":[\"integer\",\"null\"]},\"interestRateBps\":{\"type\":[\"integer\",\"null\"]},\"maturityDate\":{\"type\":[\"string\",\"null\"],\"format\":\"date\"},\"locked\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"accountNumber\",\"name\",\"type\",\"product\",\"productName\",\"status\",\"currency\",\"balanceCents\",\"termMonths\",\"interestRateBps\",\"maturityDate\",\"locked\",\"createdAt\"]}}},\"BankAccount_list\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"accountNumber\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"CHECKING\",\"SAVINGS\",\"TIME_DEPOSIT\"]},\"product\":{\"type\":[\"string\",\"null\"],\"enum\":[\"STARTER_SAVINGS\",\"EVERYDAY_CHECKING\",\"TIME_DEPOSIT\",null]},\"productName\":{\"type\":[\"string\",\"null\"]},\"status\":{\"type\":\"string\",\"enum\":[\"ACTIVE\",\"FROZEN\"]},\"currency\":{\"type\":\"string\"},\"balanceCents\":{\"type\":\"integer\"},\"termMonths\":{\"type\":[\"integer\",\"null\"]},\"interestRateBps\":{\"type\":[\"integer\",\"null\"]},\"maturityDate\":{\"type\":[\"string\",\"null\"],\"format\":\"date\"},\"locked\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"accountNumber\",\"name\",\"type\",\"product\",\"productName\",\"status\",\"currency\",\"balanceCents\",\"termMonths\",\"interestRateBps\",\"maturityDate\",\"locked\",\"createdAt\"]}}}},\"BankTransaction_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"reference\":{\"type\":\"string\"},\"accountId\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"DEPOSIT\",\"WITHDRAWAL\",\"TRANSFER_IN\",\"TRANSFER_OUT\",\"LOAN_DISBURSEMENT\",\"LOAN_PAYMENT\"]},\"amountCents\":{\"type\":\"integer\"},\"balanceAfterCents\":{\"type\":\"integer\"},\"counterparty\":{\"type\":[\"string\",\"null\"]},\"description\":{\"type\":[\"string\",\"null\"]},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"reference\",\"accountId\",\"type\",\"amountCents\",\"balanceAfterCents\",\"counterparty\",\"description\",\"createdAt\"]}}},\"BankTransaction_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"reference\":{\"type\":\"string\"},\"accountId\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"DEPOSIT\",\"WITHDRAWAL\",\"TRANSFER_IN\",\"TRANSFER_OUT\",\"LOAN_DISBURSEMENT\",\"LOAN_PAYMENT\"]},\"amountCents\":{\"type\":\"integer\"},\"balanceAfterCents\":{\"type\":\"integer\"},\"counterparty\":{\"type\":[\"string\",\"null\"]},\"description\":{\"type\":[\"string\",\"null\"]},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"reference\",\"accountId\",\"type\",\"amountCents\",\"balanceAfterCents\",\"counterparty\",\"description\",\"createdAt\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"HotelSummary_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"starRating\":{\"type\":\"integer\"},\"amenities\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"imageUrl\":{\"type\":[\"string\",\"null\"]},\"fromPriceCents\":{\"type\":\"integer\"},\"matchingRooms\":{\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"city\",\"country\",\"address\",\"description\",\"starRating\",\"amenities\",\"imageUrl\",\"fromPriceCents\",\"matchingRooms\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"HotelDetail_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"allOf\":[{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"starRating\":{\"type\":\"integer\"},\"amenities\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"imageUrl\":{\"type\":[\"string\",\"null\"]},\"fromPriceCents\":{\"type\":\"integer\"},\"matchingRooms\":{\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"city\",\"country\",\"address\",\"description\",\"starRating\",\"amenities\",\"imageUrl\"]},{\"type\":\"object\",\"properties\":{\"rooms\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"hotelId\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"STANDARD\",\"DELUXE\",\"SUITE\",\"FAMILY\"]},\"description\":{\"type\":\"string\"},\"maxGuests\":{\"type\":\"integer\"},\"pricePerNightCents\":{\"type\":\"integer\"},\"totalRooms\":{\"type\":\"integer\"},\"availableRooms\":{\"type\":[\"integer\",\"null\"]},\"available\":{\"type\":[\"boolean\",\"null\"]},\"nights\":{\"type\":[\"integer\",\"null\"]},\"stayTotalCents\":{\"type\":[\"integer\",\"null\"]}},\"required\":[\"id\",\"hotelId\",\"name\",\"type\",\"description\",\"maxGuests\",\"pricePerNightCents\",\"totalRooms\",\"availableRooms\",\"available\",\"nights\",\"stayTotalCents\"]}}},\"required\":[\"rooms\"]}]}}},\"Room_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"hotelId\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"STANDARD\",\"DELUXE\",\"SUITE\",\"FAMILY\"]},\"description\":{\"type\":\"string\"},\"maxGuests\":{\"type\":\"integer\"},\"pricePerNightCents\":{\"type\":\"integer\"},\"totalRooms\":{\"type\":\"integer\"},\"availableRooms\":{\"type\":[\"integer\",\"null\"]},\"available\":{\"type\":[\"boolean\",\"null\"]},\"nights\":{\"type\":[\"integer\",\"null\"]},\"stayTotalCents\":{\"type\":[\"integer\",\"null\"]}},\"required\":[\"id\",\"hotelId\",\"name\",\"type\",\"description\",\"maxGuests\",\"pricePerNightCents\",\"totalRooms\",\"availableRooms\",\"available\",\"nights\",\"stayTotalCents\"]}}},\"Booking_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"bookingNumber\":{\"type\":\"string\"},\"userId\":{\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"CONFIRMED\",\"CANCELLED\"]},\"checkIn\":{\"type\":\"string\",\"format\":\"date\"},\"checkOut\":{\"type\":\"string\",\"format\":\"date\"},\"guests\":{\"type\":\"integer\"},\"nights\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"},\"room\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\"},\"pricePerNightCents\":{\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"type\",\"pricePerNightCents\"]},\"hotel\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"city\",\"country\"]},\"canCancel\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"cancelledAt\":{\"type\":[\"string\",\"null\"],\"format\":\"date-time\"}},\"required\":[\"id\",\"bookingNumber\",\"userId\",\"status\",\"checkIn\",\"checkOut\",\"guests\",\"nights\",\"totalCents\",\"room\",\"hotel\",\"canCancel\",\"createdAt\",\"cancelledAt\"]}}},\"Booking_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"bookingNumber\":{\"type\":\"string\"},\"userId\":{\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"CONFIRMED\",\"CANCELLED\"]},\"checkIn\":{\"type\":\"string\",\"format\":\"date\"},\"checkOut\":{\"type\":\"string\",\"format\":\"date\"},\"guests\":{\"type\":\"integer\"},\"nights\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"},\"room\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\"},\"pricePerNightCents\":{\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"type\",\"pricePerNightCents\"]},\"hotel\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"city\",\"country\"]},\"canCancel\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"cancelledAt\":{\"type\":[\"string\",\"null\"],\"format\":\"date-time\"}},\"required\":[\"id\",\"bookingNumber\",\"userId\",\"status\",\"checkIn\",\"checkOut\",\"guests\",\"nights\",\"totalCents\",\"room\",\"hotel\",\"canCancel\",\"createdAt\",\"cancelledAt\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"ErrorResponse\":{\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"object\",\"required\":[\"code\",\"message\",\"requestId\"],\"properties\":{\"code\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"},\"details\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"field\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"}},\"required\":[\"message\"]}},\"requestId\":{\"type\":\"string\",\"format\":\"uuid\"}}}}}}",
+			"type": "string",
+			"description": "JSON schemas built from the API OpenAPI document (npm run schemas). Tests read them."
+		},
+		{
+			"key": "token_ecommerce",
+			"value": "",
+			"type": "string",
+			"description": "Filled automatically before the first request that needs it."
+		},
+		{
+			"key": "token_ecommerce_expires",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_banking",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_banking_expires",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_travel",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_travel_expires",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_admin",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_admin_expires",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "searchCheckIn",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "searchCheckOut",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "stayCheckIn",
+			"value": "",
+			"type": "string",
+			"description": "Set before \"Room - available on free dates\"."
+		},
+		{
+			"key": "stayCheckOut",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "longCheckIn",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "longCheckOut",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "tooLongCheckIn",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "tooLongCheckOut",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "soloCheckIn",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "soloCheckOut",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "longBookingCheckIn",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "longBookingCheckOut",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "roomRate",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "bookingId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "soloBookingId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "longBookingId",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

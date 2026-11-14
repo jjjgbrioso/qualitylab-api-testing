@@ -1,0 +1,247 @@
+{
+	"info": {
+		"_postman_id": "39433510-a93c-5bae-a456-598289083ab3",
+		"name": "Data-driven - Hotel searches",
+		"description": "Hotel searches, one per row of data/hotel-searches.json. Each row gives the query and what every\nresult must match (city, minimum stars, amenity), or the expected validation error.\n\nDATA-DRIVEN: run this collection with a data file. Each row of the file is one test case.\n- Postman: Collection Runner > choose this collection > Select File > data/hotel-searches.json > Run.\n- Newman: npx newman run <this file> -e environments/staging.postman_environment.json -d data/hotel-searches.json\n  (or simply npm test, which does this for you).\nA single Send in Postman has no data row, so its checks do not apply.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Hotels - {{case}}",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"const row = pm.iterationData.toObject();",
+							"for (const [key, value] of Object.entries(row.query || {})) {",
+							"  pm.request.url.addQueryParams([{ key, value: String(value) }]);",
+							"}"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"const row = pm.iterationData.toObject();",
+							"",
+							"pm.test(`[${row.case}] status is ${row.expectedStatus}`, () => {",
+							"  pm.response.to.have.status(row.expectedStatus);",
+							"});",
+							"",
+							"if (row.expectedStatus === 200) {",
+							"  const hotels = pm.response.json().data;",
+							"",
+							"  pm.test(`[${row.case}] ${row.minResults} to ${row.maxResults ?? 'any'} hotels`, () => {",
+							"    pm.expect(hotels.length).to.be.at.least(row.minResults);",
+							"    if (row.maxResults !== undefined && row.maxResults !== null) pm.expect(hotels.length).to.be.at.most(row.maxResults);",
+							"  });",
+							"",
+							"  pm.test(`[${row.case}] every hotel matches the search`, () => {",
+							"    for (const hotel of hotels) {",
+							"      if (row.city) pm.expect(hotel.city, hotel.name).to.eql(row.city);",
+							"      if (row.minStars) pm.expect(hotel.starRating, hotel.name).to.be.at.least(row.minStars);",
+							"      if (row.amenity) pm.expect(hotel.amenities, hotel.name).to.include(row.amenity);",
+							"    }",
+							"  });",
+							"} else {",
+							"  pm.test(`[${row.case}] VALIDATION_ERROR on ${row.expectedField}`, () => {",
+							"    const error = pm.response.json().error;",
+							"    pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+							"    pm.expect(error.details.map((detail) => detail.field)).to.include(row.expectedField);",
+							"  });",
+							"}"
+						]
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableCookies": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/hotels",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"hotels"
+					]
+				},
+				"description": "Adds the query parameters from the data row, then checks the results against the row."
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"/*",
+					" * DYNAMIC TOKEN HANDLING (runs before every request in this collection)",
+					" *",
+					" * A request that needs a session sends the header",
+					" *     Authorization: Bearer {{token_<module>}}",
+					" * where <module> is ecommerce, banking, travel or admin. Each sign-in opens one module, so",
+					" * there is one token per module.",
+					" *",
+					" * This script looks at that header. If the token for that module is missing, or expires within",
+					" * a minute, it signs in first with pm.sendRequest, using the credentials from the environment",
+					" * (testUsername/testPassword, or adminUsername/adminPassword for admin), and saves the token",
+					" * and its expiry time as collection variables. Postman waits for the sign-in to finish before",
+					" * it sends the request itself.",
+					" *",
+					" * Requests in this collection have Settings > \"Disable cookie jar\" on, so they authenticate with",
+					" * the Bearer token only. pm.sendRequest still uses the cookie jar, so after each sign-in this",
+					" * script clears the session cookie it received.",
+					" */",
+					"const header = pm.request.headers.get('Authorization') || '';",
+					"const wanted = header.match(/\\{\\{token_(ecommerce|banking|travel|admin)\\}\\}/);",
+					"",
+					"if (wanted) {",
+					"  const module = wanted[1];",
+					"  const tokenKey = `token_${module}`;",
+					"  const expiresKey = `token_${module}_expires`;",
+					"  const expiresAt = Number(pm.collectionVariables.get(expiresKey) || 0);",
+					"  const stillValid = pm.collectionVariables.get(tokenKey) && Date.now() < expiresAt - 60 * 1000;",
+					"",
+					"  if (!stillValid) {",
+					"    const admin = module === 'admin';",
+					"    const email = pm.environment.get(admin ? 'adminUsername' : 'testUsername');",
+					"    const password = pm.environment.get(admin ? 'adminPassword' : 'testPassword');",
+					"    if (!email || !password) {",
+					"      throw new Error(",
+					"        `Set ${admin ? 'adminUsername and adminPassword' : 'testUsername and testPassword'} in the selected environment (Current value).`,",
+					"      );",
+					"    }",
+					"",
+					"    pm.sendRequest(",
+					"      {",
+					"        url: `${pm.environment.get('baseUrl')}/auth/login`,",
+					"        method: 'POST',",
+					"        header: { 'Content-Type': 'application/json' },",
+					"        body: { mode: 'raw', raw: JSON.stringify({ email, password, module }) },",
+					"      },",
+					"      (error, response) => {",
+					"        if (error || response.code !== 200) {",
+					"          throw new Error(`Automatic sign-in to ${module} failed: ${error ? error.message : `${response.code} ${response.text()}`}`);",
+					"        }",
+					"        const { token, expiresIn } = response.json().data;",
+					"        pm.collectionVariables.set(tokenKey, token);",
+					"        pm.collectionVariables.set(expiresKey, String(Date.now() + expiresIn * 1000));",
+					"",
+					"        // The sign-in also stored the app's session cookie. If it stayed, the next automatic",
+					"        // sign-in would send it, and the app would end that session (and so this token).",
+					"        pm.cookies.jar().clear(pm.environment.get('baseUrl'), (clearError) => {",
+					"          if (clearError) {",
+					"            console.warn(",
+					"              'Could not clear the session cookie. In Postman, open Cookies > Domains Allowlist and add the API domain ' +",
+					"                '(for example quality-lab-jb.vercel.app), or tokens of other modules may stop working.',",
+					"            );",
+					"          }",
+					"        });",
+					"      },",
+					"    );",
+					"  }",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"/*",
+					" * CHECKS FOR EVERY RESPONSE (run after every request in this collection)",
+					" * Each request's own Tests tab adds the checks for that request.",
+					" */",
+					"pm.test('[every response] no server error (status below 500)', () => {",
+					"  pm.expect(pm.response.code).to.be.below(500);",
+					"});",
+					"",
+					"pm.test('[every response] answered within 20 seconds', () => {",
+					"  pm.expect(pm.response.responseTime).to.be.below(20000);",
+					"});",
+					"",
+					"pm.test('[every response] carries an x-request-id header', () => {",
+					"  pm.response.to.have.header('x-request-id');",
+					"});",
+					"",
+					"if (pm.response.code !== 204) {",
+					"  pm.test('[every response] body is JSON', () => {",
+					"    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+					"  });",
+					"}",
+					"",
+					"// Every error uses the same shape: { error: { code, message, details?, requestId } }.",
+					"if (pm.response.code >= 400) {",
+					"  pm.test('[every response] error body matches the ErrorResponse schema', () => {",
+					"    const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+					"    pm.response.to.have.jsonSchema(schemas.ErrorResponse);",
+					"  });",
+					"}"
+				]
+			}
+		}
+	],
+	"protocolProfileBehavior": {
+		"disableCookies": true
+	},
+	"variable": [
+		{
+			"key": "schemas",
+			"value": "{\"User_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"email\":{\"type\":\"string\"},\"firstName\":{\"type\":\"string\"},\"lastName\":{\"type\":\"string\"},\"role\":{\"type\":\"string\",\"enum\":[\"CUSTOMER\",\"ADMIN\"]},\"status\":{\"type\":\"string\",\"enum\":[\"ACTIVE\",\"DISABLED\"]},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"email\",\"firstName\",\"lastName\",\"role\",\"status\",\"createdAt\"]}}},\"LoginResult_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"token\":{\"type\":\"string\"},\"tokenType\":{\"type\":\"string\"},\"expiresIn\":{\"type\":\"integer\"},\"module\":{\"type\":\"string\",\"enum\":[\"ecommerce\",\"banking\",\"travel\",\"admin\"]},\"user\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"email\":{\"type\":\"string\"},\"firstName\":{\"type\":\"string\"},\"lastName\":{\"type\":\"string\"},\"role\":{\"type\":\"string\",\"enum\":[\"CUSTOMER\",\"ADMIN\"]},\"status\":{\"type\":\"string\",\"enum\":[\"ACTIVE\",\"DISABLED\"]},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"email\",\"firstName\",\"lastName\",\"role\",\"status\",\"createdAt\"]}},\"required\":[\"token\",\"tokenType\",\"expiresIn\",\"module\",\"user\"]}}},\"Product_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"category\":{\"type\":\"string\"},\"brand\":{\"type\":\"string\"},\"priceCents\":{\"type\":\"integer\"},\"listPriceCents\":{\"type\":[\"integer\",\"null\"]},\"onSale\":{\"type\":\"boolean\"},\"discountPercent\":{\"type\":[\"integer\",\"null\"]},\"stock\":{\"type\":\"integer\"},\"inStock\":{\"type\":\"boolean\"},\"rating\":{\"type\":\"number\"},\"imageUrl\":{\"type\":[\"string\",\"null\"]},\"isActive\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"updatedAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"sku\",\"name\",\"description\",\"category\",\"brand\",\"priceCents\",\"listPriceCents\",\"onSale\",\"discountPercent\",\"stock\",\"inStock\",\"rating\",\"imageUrl\",\"isActive\",\"createdAt\",\"updatedAt\"]}}},\"Product_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"category\":{\"type\":\"string\"},\"brand\":{\"type\":\"string\"},\"priceCents\":{\"type\":\"integer\"},\"listPriceCents\":{\"type\":[\"integer\",\"null\"]},\"onSale\":{\"type\":\"boolean\"},\"discountPercent\":{\"type\":[\"integer\",\"null\"]},\"stock\":{\"type\":\"integer\"},\"inStock\":{\"type\":\"boolean\"},\"rating\":{\"type\":\"number\"},\"imageUrl\":{\"type\":[\"string\",\"null\"]},\"isActive\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"updatedAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"sku\",\"name\",\"description\",\"category\",\"brand\",\"priceCents\",\"listPriceCents\",\"onSale\",\"discountPercent\",\"stock\",\"inStock\",\"rating\",\"imageUrl\",\"isActive\",\"createdAt\",\"updatedAt\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"Cart_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"productId\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"unitPriceCents\":{\"type\":\"integer\"},\"quantity\":{\"type\":\"integer\"},\"lineTotalCents\":{\"type\":\"integer\"},\"availableStock\":{\"type\":\"integer\"}},\"required\":[\"productId\",\"sku\",\"name\",\"unitPriceCents\",\"quantity\",\"lineTotalCents\",\"availableStock\"]}},\"itemCount\":{\"type\":\"integer\"},\"subtotalCents\":{\"type\":\"integer\"},\"taxCents\":{\"type\":\"integer\"},\"shippingCents\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"}},\"required\":[\"items\",\"itemCount\",\"subtotalCents\",\"taxCents\",\"shippingCents\",\"totalCents\"]}}},\"Order_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"orderNumber\":{\"type\":\"string\"},\"userId\":{\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"PAID\",\"SHIPPED\",\"DELIVERED\",\"CANCELLED\"]},\"paymentStatus\":{\"type\":\"string\",\"enum\":[\"CAPTURED\",\"REFUNDED\"]},\"subtotalCents\":{\"type\":\"integer\"},\"taxCents\":{\"type\":\"integer\"},\"shippingCents\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"},\"shipping\":{\"type\":\"object\",\"properties\":{\"fullName\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"postcode\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"}},\"required\":[\"fullName\",\"address\",\"city\",\"postcode\",\"country\"]},\"payment\":{\"type\":\"object\",\"properties\":{\"cardBrand\":{\"type\":\"string\"},\"cardLast4\":{\"type\":\"string\"}},\"required\":[\"cardBrand\",\"cardLast4\"]},\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"productId\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"unitPriceCents\":{\"type\":\"integer\"},\"quantity\":{\"type\":\"integer\"},\"lineTotalCents\":{\"type\":\"integer\"}},\"required\":[\"productId\",\"sku\",\"name\",\"unitPriceCents\",\"quantity\",\"lineTotalCents\"]}},\"canCancel\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"cancelledAt\":{\"type\":[\"string\",\"null\"],\"format\":\"date-time\"}},\"required\":[\"id\",\"orderNumber\",\"userId\",\"status\",\"paymentStatus\",\"subtotalCents\",\"taxCents\",\"shippingCents\",\"totalCents\",\"shipping\",\"payment\",\"items\",\"canCancel\",\"createdAt\",\"cancelledAt\"]}}},\"Order_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"orderNumber\":{\"type\":\"string\"},\"userId\":{\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"PAID\",\"SHIPPED\",\"DELIVERED\",\"CANCELLED\"]},\"paymentStatus\":{\"type\":\"string\",\"enum\":[\"CAPTURED\",\"REFUNDED\"]},\"subtotalCents\":{\"type\":\"integer\"},\"taxCents\":{\"type\":\"integer\"},\"shippingCents\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"},\"shipping\":{\"type\":\"object\",\"properties\":{\"fullName\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"postcode\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"}},\"required\":[\"fullName\",\"address\",\"city\",\"postcode\",\"country\"]},\"payment\":{\"type\":\"object\",\"properties\":{\"cardBrand\":{\"type\":\"string\"},\"cardLast4\":{\"type\":\"string\"}},\"required\":[\"cardBrand\",\"cardLast4\"]},\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"productId\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"unitPriceCents\":{\"type\":\"integer\"},\"quantity\":{\"type\":\"integer\"},\"lineTotalCents\":{\"type\":\"integer\"}},\"required\":[\"productId\",\"sku\",\"name\",\"unitPriceCents\",\"quantity\",\"lineTotalCents\"]}},\"canCancel\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"cancelledAt\":{\"type\":[\"string\",\"null\"],\"format\":\"date-time\"}},\"required\":[\"id\",\"orderNumber\",\"userId\",\"status\",\"paymentStatus\",\"subtotalCents\",\"taxCents\",\"shippingCents\",\"totalCents\",\"shipping\",\"payment\",\"items\",\"canCancel\",\"createdAt\",\"cancelledAt\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"BankAccount_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"accountNumber\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"CHECKING\",\"SAVINGS\",\"TIME_DEPOSIT\"]},\"product\":{\"type\":[\"string\",\"null\"],\"enum\":[\"STARTER_SAVINGS\",\"EVERYDAY_CHECKING\",\"TIME_DEPOSIT\",null]},\"productName\":{\"type\":[\"string\",\"null\"]},\"status\":{\"type\":\"string\",\"enum\":[\"ACTIVE\",\"FROZEN\"]},\"currency\":{\"type\":\"string\"},\"balanceCents\":{\"type\":\"integer\"},\"termMonths\":{\"type\":[\"integer\",\"null\"]},\"interestRateBps\":{\"type\":[\"integer\",\"null\"]},\"maturityDate\":{\"type\":[\"string\",\"null\"],\"format\":\"date\"},\"locked\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"accountNumber\",\"name\",\"type\",\"product\",\"productName\",\"status\",\"currency\",\"balanceCents\",\"termMonths\",\"interestRateBps\",\"maturityDate\",\"locked\",\"createdAt\"]}}},\"BankAccount_list\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"accountNumber\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"CHECKING\",\"SAVINGS\",\"TIME_DEPOSIT\"]},\"product\":{\"type\":[\"string\",\"null\"],\"enum\":[\"STARTER_SAVINGS\",\"EVERYDAY_CHECKING\",\"TIME_DEPOSIT\",null]},\"productName\":{\"type\":[\"string\",\"null\"]},\"status\":{\"type\":\"string\",\"enum\":[\"ACTIVE\",\"FROZEN\"]},\"currency\":{\"type\":\"string\"},\"balanceCents\":{\"type\":\"integer\"},\"termMonths\":{\"type\":[\"integer\",\"null\"]},\"interestRateBps\":{\"type\":[\"integer\",\"null\"]},\"maturityDate\":{\"type\":[\"string\",\"null\"],\"format\":\"date\"},\"locked\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"accountNumber\",\"name\",\"type\",\"product\",\"productName\",\"status\",\"currency\",\"balanceCents\",\"termMonths\",\"interestRateBps\",\"maturityDate\",\"locked\",\"createdAt\"]}}}},\"BankTransaction_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"reference\":{\"type\":\"string\"},\"accountId\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"DEPOSIT\",\"WITHDRAWAL\",\"TRANSFER_IN\",\"TRANSFER_OUT\",\"LOAN_DISBURSEMENT\",\"LOAN_PAYMENT\"]},\"amountCents\":{\"type\":\"integer\"},\"balanceAfterCents\":{\"type\":\"integer\"},\"counterparty\":{\"type\":[\"string\",\"null\"]},\"description\":{\"type\":[\"string\",\"null\"]},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"reference\",\"accountId\",\"type\",\"amountCents\",\"balanceAfterCents\",\"counterparty\",\"description\",\"createdAt\"]}}},\"BankTransaction_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"reference\":{\"type\":\"string\"},\"accountId\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"DEPOSIT\",\"WITHDRAWAL\",\"TRANSFER_IN\",\"TRANSFER_OUT\",\"LOAN_DISBURSEMENT\",\"LOAN_PAYMENT\"]},\"amountCents\":{\"type\":\"integer\"},\"balanceAfterCents\":{\"type\":\"integer\"},\"counterparty\":{\"type\":[\"string\",\"null\"]},\"description\":{\"type\":[\"string\",\"null\"]},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"reference\",\"accountId\",\"type\",\"amountCents\",\"balanceAfterCents\",\"counterparty\",\"description\",\"createdAt\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"HotelSummary_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"starRating\":{\"type\":\"integer\"},\"amenities\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"imageUrl\":{\"type\":[\"string\",\"null\"]},\"fromPriceCents\":{\"type\":\"integer\"},\"matchingRooms\":{\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"city\",\"country\",\"address\",\"description\",\"starRating\",\"amenities\",\"imageUrl\",\"fromPriceCents\",\"matchingRooms\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"HotelDetail_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"allOf\":[{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"starRating\":{\"type\":\"integer\"},\"amenities\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"imageUrl\":{\"type\":[\"string\",\"null\"]},\"fromPriceCents\":{\"type\":\"integer\"},\"matchingRooms\":{\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"city\",\"country\",\"address\",\"description\",\"starRating\",\"amenities\",\"imageUrl\"]},{\"type\":\"object\",\"properties\":{\"rooms\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"hotelId\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"STANDARD\",\"DELUXE\",\"SUITE\",\"FAMILY\"]},\"description\":{\"type\":\"string\"},\"maxGuests\":{\"type\":\"integer\"},\"pricePerNightCents\":{\"type\":\"integer\"},\"totalRooms\":{\"type\":\"integer\"},\"availableRooms\":{\"type\":[\"integer\",\"null\"]},\"available\":{\"type\":[\"boolean\",\"null\"]},\"nights\":{\"type\":[\"integer\",\"null\"]},\"stayTotalCents\":{\"type\":[\"integer\",\"null\"]}},\"required\":[\"id\",\"hotelId\",\"name\",\"type\",\"description\",\"maxGuests\",\"pricePerNightCents\",\"totalRooms\",\"availableRooms\",\"available\",\"nights\",\"stayTotalCents\"]}}},\"required\":[\"rooms\"]}]}}},\"Room_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"hotelId\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"STANDARD\",\"DELUXE\",\"SUITE\",\"FAMILY\"]},\"description\":{\"type\":\"string\"},\"maxGuests\":{\"type\":\"integer\"},\"pricePerNightCents\":{\"type\":\"integer\"},\"totalRooms\":{\"type\":\"integer\"},\"availableRooms\":{\"type\":[\"integer\",\"null\"]},\"available\":{\"type\":[\"boolean\",\"null\"]},\"nights\":{\"type\":[\"integer\",\"null\"]},\"stayTotalCents\":{\"type\":[\"integer\",\"null\"]}},\"required\":[\"id\",\"hotelId\",\"name\",\"type\",\"description\",\"maxGuests\",\"pricePerNightCents\",\"totalRooms\",\"availableRooms\",\"available\",\"nights\",\"stayTotalCents\"]}}},\"Booking_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"bookingNumber\":{\"type\":\"string\"},\"userId\":{\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"CONFIRMED\",\"CANCELLED\"]},\"checkIn\":{\"type\":\"string\",\"format\":\"date\"},\"checkOut\":{\"type\":\"string\",\"format\":\"date\"},\"guests\":{\"type\":\"integer\"},\"nights\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"},\"room\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\"},\"pricePerNightCents\":{\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"type\",\"pricePerNightCents\"]},\"hotel\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"city\",\"country\"]},\"canCancel\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"cancelledAt\":{\"type\":[\"string\",\"null\"],\"format\":\"date-time\"}},\"required\":[\"id\",\"bookingNumber\",\"userId\",\"status\",\"checkIn\",\"checkOut\",\"guests\",\"nights\",\"totalCents\",\"room\",\"hotel\",\"canCancel\",\"createdAt\",\"cancelledAt\"]}}},\"Booking_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"bookingNumber\":{\"type\":\"string\"},\"userId\":{\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"CONFIRMED\",\"CANCELLED\"]},\"checkIn\":{\"type\":\"string\",\"format\":\"date\"},\"checkOut\":{\"type\":\"string\",\"format\":\"date\"},\"guests\":{\"type\":\"integer\"},\"nights\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"},\"room\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\"},\"pricePerNightCents\":{\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"type\",\"pricePerNightCents\"]},\"hotel\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"city\",\"country\"]},\"canCancel\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"cancelledAt\":{\"type\":[\"string\",\"null\"],\"format\":\"date-time\"}},\"required\":[\"id\",\"bookingNumber\",\"userId\",\"status\",\"checkIn\",\"checkOut\",\"guests\",\"nights\",\"totalCents\",\"room\",\"hotel\",\"canCancel\",\"createdAt\",\"cancelledAt\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"ErrorResponse\":{\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"object\",\"required\":[\"code\",\"message\",\"requestId\"],\"properties\":{\"code\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"},\"details\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"field\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"}},\"required\":[\"message\"]}},\"requestId\":{\"type\":\"string\",\"format\":\"uuid\"}}}}}}",
+			"type": "string",
+			"description": "JSON schemas built from the API OpenAPI document (npm run schemas). Tests read them."
+		},
+		{
+			"key": "token_ecommerce",
+			"value": "",
+			"type": "string",
+			"description": "Filled automatically before the first request that needs it."
+		},
+		{
+			"key": "token_ecommerce_expires",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_banking",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_banking_expires",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_travel",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_travel_expires",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_admin",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_admin_expires",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

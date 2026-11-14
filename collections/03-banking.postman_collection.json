@@ -1,0 +1,1964 @@
+{
+	"info": {
+		"_postman_id": "6d7629f9-3aee-56d6-aecc-8f4776abdf61",
+		"name": "03 - QualityLab Banking",
+		"description": "Accounts, balances, deposits, withdrawals, transfers and transaction history for the test customer.\n\nAmounts are small and random. The 10,000.00 limit test deposits and then withdraws the same amount.\nDeposits, withdrawals and transfers cannot be undone, so they stay in the customer's history.\nMore amount and transfer cases are in the data-driven collections \"Amount boundaries\" and \"Invalid transfers\".",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Accounts",
+			"description": "Account list and details.",
+			"item": [
+				{
+					"name": "Accounts - list my accounts",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response matches the BankAccount list schema', () => {",
+									"  const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+									"  pm.response.to.have.jsonSchema(schemas.BankAccount_list);",
+									"});",
+									"",
+									"const accounts = pm.response.json().data;",
+									"const checking = accounts.find((account) => account.type === 'CHECKING' && account.status === 'ACTIVE' && !account.locked);",
+									"const savings = accounts.find((account) => account.type === 'SAVINGS' && account.status === 'ACTIVE' && !account.locked);",
+									"",
+									"pm.test('An active checking and savings account exist', () => {",
+									"  pm.expect(checking, 'checking account').to.exist;",
+									"  pm.expect(savings, 'savings account').to.exist;",
+									"});",
+									"",
+									"pm.test('Account numbers are 10 digits and the currency is PHP', () => {",
+									"  for (const account of accounts) {",
+									"    pm.expect(account.accountNumber).to.match(/^\\d{10}$/);",
+									"    pm.expect(account.currency).to.eql('PHP');",
+									"  }",
+									"});",
+									"",
+									"pm.collectionVariables.set('checkingId', checking.id);",
+									"pm.collectionVariables.set('checkingNumber', checking.accountNumber);",
+									"pm.collectionVariables.set('checkingBalance', String(checking.balanceCents));",
+									"pm.collectionVariables.set('savingsId', savings.id);",
+									"pm.collectionVariables.set('savingsNumber', savings.accountNumber);",
+									"pm.collectionVariables.set('savingsBalance', String(savings.balanceCents));"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/accounts",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"accounts"
+							]
+						},
+						"description": "Expected: 200 OK, the test customer's accounts, including an active CHECKING and SAVINGS account.\nSaves their ids, numbers and balances for the rest of the collection."
+					},
+					"response": []
+				},
+				{
+					"name": "Accounts - details of my checking account",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response matches the BankAccount schema', () => {",
+									"  const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+									"  pm.response.to.have.jsonSchema(schemas.BankAccount_one);",
+									"});",
+									"",
+									"pm.test('Same account and balance as in the list', () => {",
+									"  const account = pm.response.json().data;",
+									"  pm.expect(account.id).to.eql(pm.collectionVariables.get('checkingId'));",
+									"  pm.expect(account.balanceCents).to.eql(Number(pm.collectionVariables.get('checkingBalance')));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/accounts/{{checkingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"accounts",
+								"{{checkingId}}"
+							]
+						},
+						"description": "Expected: 200 OK, a BankAccount with the same balance as in the list."
+					},
+					"response": []
+				},
+				{
+					"name": "Accounts - another customer's account is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 403', () => {",
+									"  pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.test('Error code is FORBIDDEN', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('FORBIDDEN');",
+									"  pm.expect(error.message).to.eql(\"This account belongs to another user.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/accounts/acct_bob_chk",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"accounts",
+								"acct_bob_chk"
+							]
+						},
+						"description": "acct_bob_chk belongs to Bob. Authorization test. Expected: 403, FORBIDDEN."
+					},
+					"response": []
+				},
+				{
+					"name": "Accounts - an unknown account",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 404', () => {",
+									"  pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test('Error code is ACCOUNT_NOT_FOUND', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('ACCOUNT_NOT_FOUND');",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/accounts/acct_nope",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"accounts",
+								"acct_nope"
+							]
+						},
+						"description": "Expected: 404, ACCOUNT_NOT_FOUND."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Balance",
+			"description": "Balance consistency.",
+			"item": [
+				{
+					"name": "Balance - equals the balance after the latest transaction",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Latest balance-after equals the account balance', () => {",
+									"  const [latest] = pm.response.json().data;",
+									"  pm.expect(latest.balanceAfterCents).to.eql(Number(pm.collectionVariables.get('checkingBalance')));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/accounts/{{checkingId}}/transactions?pageSize=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"accounts",
+								"{{checkingId}}",
+								"transactions"
+							],
+							"query": [
+								{
+									"key": "pageSize",
+									"value": "1"
+								}
+							]
+						},
+						"description": "The newest transaction's balanceAfterCents must equal the account balance."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Deposit",
+			"description": "Deposits, idempotency, duplicates and the single-transaction limit.",
+			"item": [
+				{
+					"name": "Deposit - a small amount into checking",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// A small, random amount in centavos. The bank refuses an identical transaction within 30 seconds,",
+									"// so a random amount keeps separate runs from looking like duplicates.",
+									"pm.collectionVariables.set('amount', String(101 + Math.floor(Math.random() * 899)));",
+									"// Every new money movement needs its own Idempotency-Key.",
+									"pm.collectionVariables.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}'));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201 Created', () => {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response matches the BankTransaction schema', () => {",
+									"  const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+									"  pm.response.to.have.jsonSchema(schemas.BankTransaction_one);",
+									"});",
+									"",
+									"const transaction = pm.response.json().data;",
+									"const amount = Number(pm.collectionVariables.get('amount'));",
+									"const before = Number(pm.collectionVariables.get('checkingBalance'));",
+									"",
+									"pm.test('A DEPOSIT of the amount with a TXN- reference', () => {",
+									"  pm.expect(transaction.type).to.eql('DEPOSIT');",
+									"  pm.expect(transaction.amountCents).to.eql(amount);",
+									"  pm.expect(transaction.reference).to.match(/^TXN-/);",
+									"});",
+									"",
+									"pm.test('The balance went up by the amount', () => {",
+									"  pm.expect(transaction.balanceAfterCents).to.eql(before + amount);",
+									"});",
+									"",
+									"pm.test('This is the first time the request was processed', () => {",
+									"  pm.expect(pm.response.headers.get('Idempotent-Replayed')).to.eql('false');",
+									"});",
+									"",
+									"pm.collectionVariables.set('checkingBalance', String(transaction.balanceAfterCents));",
+									"pm.collectionVariables.set('depositId', transaction.id);",
+									"pm.collectionVariables.set('depositReference', transaction.reference);"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "{{idempotencyKey}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/deposits",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"deposits"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountId\": \"{{checkingId}}\",\n  \"amountCents\": {{amount}},\n  \"description\": \"Newman deposit\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 201 Created, a DEPOSIT transaction for the amount, the balance going up by it,\na TXN- reference, and Idempotent-Replayed: false."
+					},
+					"response": []
+				},
+				{
+					"name": "Deposit - the same request again is replayed, not repeated",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201', () => {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('The header says the response was replayed', () => {",
+									"  pm.expect(pm.response.headers.get('Idempotent-Replayed')).to.eql('true');",
+									"});",
+									"",
+									"pm.test('It is the same transaction as the first time', () => {",
+									"  const transaction = pm.response.json().data;",
+									"  pm.expect(transaction.id).to.eql(pm.collectionVariables.get('depositId'));",
+									"  pm.expect(transaction.reference).to.eql(pm.collectionVariables.get('depositReference'));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "{{idempotencyKey}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/deposits",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"deposits"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountId\": \"{{checkingId}}\",\n  \"amountCents\": {{amount}},\n  \"description\": \"Newman deposit\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Duplicate request with the same Idempotency-Key. Expected: 201 with the first response\n(same transaction), header Idempotent-Replayed: true, and no second deposit."
+					},
+					"response": []
+				},
+				{
+					"name": "Deposit - the balance moved only once",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Balance equals the balance after one deposit', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.balanceCents).to.eql(Number(pm.collectionVariables.get('checkingBalance')));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/accounts/{{checkingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"accounts",
+								"{{checkingId}}"
+							]
+						},
+						"description": "Expected: the balance after the first deposit, not two deposits."
+					},
+					"response": []
+				},
+				{
+					"name": "Deposit - an identical deposit within 30 seconds is refused (duplicate)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.collectionVariables.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}'));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 409 Conflict', () => {",
+									"  pm.response.to.have.status(409);",
+									"});",
+									"",
+									"pm.test('Error code is DUPLICATE_TRANSACTION and names the first transaction', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('DUPLICATE_TRANSACTION');",
+									"  pm.expect(error.message).to.include(pm.collectionVariables.get('depositReference'));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "{{idempotencyKey}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/deposits",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"deposits"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountId\": \"{{checkingId}}\",\n  \"amountCents\": {{amount}},\n  \"description\": \"Newman deposit\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Same account and amount, but a new Idempotency-Key, so it is a new request.\nExpected: 409, DUPLICATE_TRANSACTION, naming the first transaction's reference."
+					},
+					"response": []
+				},
+				{
+					"name": "Deposit - the Idempotency-Key header is required",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('Error code is INVALID_IDEMPOTENCY_KEY', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('INVALID_IDEMPOTENCY_KEY');",
+									"  pm.expect(error.message).to.eql(\"The Idempotency-Key header is required.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/deposits",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"deposits"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountId\": \"{{checkingId}}\",\n  \"amountCents\": 555\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "No Idempotency-Key header. Expected: 400, INVALID_IDEMPOTENCY_KEY."
+					},
+					"response": []
+				},
+				{
+					"name": "Deposit - exactly the single-transaction limit of 10,000.00 (boundary)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.collectionVariables.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}'));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201 Created', () => {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('The full 10,000.00 was deposited', () => {",
+									"  const transaction = pm.response.json().data;",
+									"  pm.expect(transaction.amountCents).to.eql(1000000);",
+									"  pm.expect(transaction.balanceAfterCents).to.eql(Number(pm.collectionVariables.get('checkingBalance')) + 1000000);",
+									"  pm.collectionVariables.set('checkingBalance', String(transaction.balanceAfterCents));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "{{idempotencyKey}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/deposits",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"deposits"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountId\": \"{{checkingId}}\",\n  \"amountCents\": 1000000,\n  \"description\": \"Newman limit test\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Boundary test: 1,000,000 centavos is the most allowed. Expected: 201. The next request takes it out again."
+					},
+					"response": []
+				},
+				{
+					"name": "Withdrawal - exactly the limit again (boundary, restores the balance)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.collectionVariables.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}'));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201 Created', () => {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('The 10,000.00 was taken out again', () => {",
+									"  const transaction = pm.response.json().data;",
+									"  pm.expect(transaction.type).to.eql('WITHDRAWAL');",
+									"  pm.expect(transaction.balanceAfterCents).to.eql(Number(pm.collectionVariables.get('checkingBalance')) - 1000000);",
+									"  pm.collectionVariables.set('checkingBalance', String(transaction.balanceAfterCents));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "{{idempotencyKey}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/withdrawals",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"withdrawals"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountId\": \"{{checkingId}}\",\n  \"amountCents\": 1000000,\n  \"description\": \"Newman limit test\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Boundary test: withdraws the 1,000,000 centavos deposited above. Expected: 201."
+					},
+					"response": []
+				},
+				{
+					"name": "Deposit - one centavo over the limit is refused (boundary)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.collectionVariables.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}'));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', () => {",
+									"  pm.response.to.have.status(422);",
+									"});",
+									"",
+									"pm.test('Error code is LIMIT_EXCEEDED', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('LIMIT_EXCEEDED');",
+									"  pm.expect(error.message).to.eql(\"A single transaction can be at most ₱10,000.00.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "{{idempotencyKey}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/deposits",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"deposits"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountId\": \"{{checkingId}}\",\n  \"amountCents\": 1000001\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "1,000,001 centavos. Expected: 422, LIMIT_EXCEEDED."
+					},
+					"response": []
+				},
+				{
+					"name": "Deposit - into another customer's account is refused",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.collectionVariables.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}'));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 403', () => {",
+									"  pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.test('Error code is FORBIDDEN', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('FORBIDDEN');",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "{{idempotencyKey}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/deposits",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"deposits"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountId\": \"acct_bob_chk\",\n  \"amountCents\": 555\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Authorization test. Expected: 403, FORBIDDEN."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Withdrawal",
+			"description": "Withdrawals and insufficient funds.",
+			"item": [
+				{
+					"name": "Withdrawal - a small amount from checking",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// A small, random amount in centavos. The bank refuses an identical transaction within 30 seconds,",
+									"// so a random amount keeps separate runs from looking like duplicates.",
+									"pm.collectionVariables.set('amount', String(101 + Math.floor(Math.random() * 899)));",
+									"// Every new money movement needs its own Idempotency-Key.",
+									"pm.collectionVariables.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}'));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201 Created', () => {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"",
+									"const transaction = pm.response.json().data;",
+									"const amount = Number(pm.collectionVariables.get('amount'));",
+									"",
+									"pm.test('A WITHDRAWAL of the amount', () => {",
+									"  pm.expect(transaction.type).to.eql('WITHDRAWAL');",
+									"  pm.expect(transaction.amountCents).to.eql(amount);",
+									"});",
+									"",
+									"pm.test('The balance went down by the amount', () => {",
+									"  pm.expect(transaction.balanceAfterCents).to.eql(Number(pm.collectionVariables.get('checkingBalance')) - amount);",
+									"});",
+									"",
+									"pm.collectionVariables.set('checkingBalance', String(transaction.balanceAfterCents));"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "{{idempotencyKey}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/withdrawals",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"withdrawals"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountId\": \"{{checkingId}}\",\n  \"amountCents\": {{amount}},\n  \"description\": \"Newman withdrawal\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Expected: 201 Created, a WITHDRAWAL, and the balance going down by the amount."
+					},
+					"response": []
+				},
+				{
+					"name": "Withdrawal - more than the balance is refused",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const tooMuch = Number(pm.collectionVariables.get('checkingBalance')) + 100;",
+									"pm.collectionVariables.set('tooMuch', String(tooMuch));",
+									"pm.collectionVariables.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}'));",
+									"if (tooMuch > 1000000) {",
+									"  console.log('Skipped: the balance is above the single-transaction limit.');",
+									"  pm.execution.skipRequest();",
+									"}"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', () => {",
+									"  pm.response.to.have.status(422);",
+									"});",
+									"",
+									"pm.test('Error code is INSUFFICIENT_FUNDS', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('INSUFFICIENT_FUNDS');",
+									"  pm.expect(error.message).to.eql(\"The account balance is too low for this transaction.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "{{idempotencyKey}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/withdrawals",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"withdrawals"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountId\": \"{{checkingId}}\",\n  \"amountCents\": {{tooMuch}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Asks for the balance plus 1.00. Expected: 422, INSUFFICIENT_FUNDS, and the balance unchanged.\nSkipped if that amount is above the single-transaction limit, which is checked first."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Transfers",
+			"description": "Transfers between accounts.",
+			"item": [
+				{
+					"name": "Transfer - between my own accounts",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// A small, random amount in centavos. The bank refuses an identical transaction within 30 seconds,",
+									"// so a random amount keeps separate runs from looking like duplicates.",
+									"pm.collectionVariables.set('amount', String(101 + Math.floor(Math.random() * 899)));",
+									"// Every new money movement needs its own Idempotency-Key.",
+									"pm.collectionVariables.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}'));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201 Created', () => {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"",
+									"const transaction = pm.response.json().data;",
+									"const amount = Number(pm.collectionVariables.get('amount'));",
+									"",
+									"pm.test('A TRANSFER_OUT of the amount to the savings account', () => {",
+									"  pm.expect(transaction.type).to.eql('TRANSFER_OUT');",
+									"  pm.expect(transaction.amountCents).to.eql(amount);",
+									"  pm.expect(transaction.counterparty).to.eql(pm.collectionVariables.get('savingsNumber'));",
+									"});",
+									"",
+									"pm.test('Checking went down by the amount', () => {",
+									"  pm.expect(transaction.balanceAfterCents).to.eql(Number(pm.collectionVariables.get('checkingBalance')) - amount);",
+									"});",
+									"",
+									"pm.collectionVariables.set('checkingBalance', String(transaction.balanceAfterCents));",
+									"pm.collectionVariables.set('transferReference', transaction.reference);"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "{{idempotencyKey}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/transfers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"transfers"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fromAccountId\": \"{{checkingId}}\",\n  \"toAccountNumber\": \"{{savingsNumber}}\",\n  \"amountCents\": {{amount}},\n  \"description\": \"Newman transfer\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "From checking to savings. Expected: 201 Created, a TRANSFER_OUT to the savings account number."
+					},
+					"response": []
+				},
+				{
+					"name": "Transfer - the savings account received it",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const [latest] = pm.response.json().data;",
+									"const amount = Number(pm.collectionVariables.get('amount'));",
+									"",
+									"pm.test('A TRANSFER_IN of the amount from checking', () => {",
+									"  pm.expect(latest.type).to.eql('TRANSFER_IN');",
+									"  pm.expect(latest.amountCents).to.eql(amount);",
+									"  pm.expect(latest.counterparty).to.eql(pm.collectionVariables.get('checkingNumber'));",
+									"});",
+									"",
+									"pm.test('Savings went up by the amount', () => {",
+									"  pm.expect(latest.balanceAfterCents).to.eql(Number(pm.collectionVariables.get('savingsBalance')) + amount);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/accounts/{{savingsId}}/transactions?pageSize=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"accounts",
+								"{{savingsId}}",
+								"transactions"
+							],
+							"query": [
+								{
+									"key": "pageSize",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Expected: savings' newest transaction is a TRANSFER_IN of the amount from the checking account."
+					},
+					"response": []
+				},
+				{
+					"name": "Transfer - to a frozen account is refused",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// A small, random amount in centavos. The bank refuses an identical transaction within 30 seconds,",
+									"// so a random amount keeps separate runs from looking like duplicates.",
+									"pm.collectionVariables.set('amount', String(101 + Math.floor(Math.random() * 899)));",
+									"// Every new money movement needs its own Idempotency-Key.",
+									"pm.collectionVariables.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}'));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 422', () => {",
+									"  pm.response.to.have.status(422);",
+									"});",
+									"",
+									"pm.test('Error code is ACCOUNT_FROZEN', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('ACCOUNT_FROZEN');",
+									"  pm.expect(error.message).to.eql(\"Account 1000000004 is frozen.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "{{idempotencyKey}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/transfers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"transfers"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fromAccountId\": \"{{checkingId}}\",\n  \"toAccountNumber\": \"1000000004\",\n  \"amountCents\": {{amount}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Account 1000000004 is frozen. Expected: 422, ACCOUNT_FROZEN."
+					},
+					"response": []
+				},
+				{
+					"name": "Transfer - from another customer's account is refused",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// A small, random amount in centavos. The bank refuses an identical transaction within 30 seconds,",
+									"// so a random amount keeps separate runs from looking like duplicates.",
+									"pm.collectionVariables.set('amount', String(101 + Math.floor(Math.random() * 899)));",
+									"// Every new money movement needs its own Idempotency-Key.",
+									"pm.collectionVariables.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}'));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 403', () => {",
+									"  pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.test('Error code is FORBIDDEN', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('FORBIDDEN');",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "{{idempotencyKey}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/transfers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"transfers"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fromAccountId\": \"acct_bob_chk\",\n  \"toAccountNumber\": \"{{checkingNumber}}\",\n  \"amountCents\": {{amount}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Authorization test: fromAccountId is Bob's. Expected: 403, FORBIDDEN."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Transaction history",
+			"description": "History, filters and paging.",
+			"item": [
+				{
+					"name": "History - newest first, including the new deposit",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response matches the BankTransaction page schema', () => {",
+									"  const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+									"  pm.response.to.have.jsonSchema(schemas.BankTransaction_page);",
+									"});",
+									"",
+									"const transactions = pm.response.json().data;",
+									"",
+									"pm.test('Newest first', () => {",
+									"  const times = transactions.map((transaction) => Date.parse(transaction.createdAt));",
+									"  pm.expect(times).to.eql([...times].sort((a, b) => b - a));",
+									"});",
+									"",
+									"pm.test('The deposit from this run is listed', () => {",
+									"  pm.expect(transactions.map((transaction) => transaction.reference)).to.include(pm.collectionVariables.get('depositReference'));",
+									"});",
+									"",
+									"pm.test('Every transaction belongs to the account', () => {",
+									"  pm.expect(transactions.every((transaction) => transaction.accountId === pm.collectionVariables.get('checkingId'))).to.eql(true);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/accounts/{{checkingId}}/transactions?pageSize=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"accounts",
+								"{{checkingId}}",
+								"transactions"
+							],
+							"query": [
+								{
+									"key": "pageSize",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Expected: 200 OK, a BankTransaction page sorted newest first, with the deposit from this run."
+					},
+					"response": []
+				},
+				{
+					"name": "History - filter by DEPOSIT",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200 OK and every transaction is a DEPOSIT', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(pm.response.json().data.every((transaction) => transaction.type === 'DEPOSIT')).to.eql(true);",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/accounts/{{checkingId}}/transactions?type=DEPOSIT&pageSize=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"accounts",
+								"{{checkingId}}",
+								"transactions"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "DEPOSIT"
+								},
+								{
+									"key": "pageSize",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Expected: only DEPOSIT transactions."
+					},
+					"response": []
+				},
+				{
+					"name": "History - filter by TRANSFER_OUT, including the new transfer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const transactions = pm.response.json().data;",
+									"",
+									"pm.test('Status is 200 OK and every transaction is a TRANSFER_OUT', () => {",
+									"  pm.response.to.have.status(200);",
+									"  pm.expect(transactions.every((transaction) => transaction.type === 'TRANSFER_OUT')).to.eql(true);",
+									"});",
+									"",
+									"pm.test('The transfer from this run is listed', () => {",
+									"  pm.expect(transactions.map((transaction) => transaction.reference)).to.include(pm.collectionVariables.get('transferReference'));",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/accounts/{{checkingId}}/transactions?type=TRANSFER_OUT&pageSize=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"accounts",
+								"{{checkingId}}",
+								"transactions"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "TRANSFER_OUT"
+								},
+								{
+									"key": "pageSize",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Expected: only TRANSFER_OUT transactions, including the transfer from this run."
+					},
+					"response": []
+				},
+				{
+					"name": "History - an unknown type is refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on type', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+									"  pm.expect(error.details.find((detail) => detail.field === 'type').message).to.eql('Choose a supported transaction type.');",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/accounts/{{checkingId}}/transactions?type=BOGUS",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"accounts",
+								"{{checkingId}}",
+								"transactions"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "BOGUS"
+								}
+							]
+						},
+						"description": "Expected: 400, \"Choose a supported transaction type.\""
+					},
+					"response": []
+				},
+				{
+					"name": "History - page size 101 is refused (boundary)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400 Bad Request', () => {",
+									"  pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('VALIDATION_ERROR on pageSize', () => {",
+									"  const detail = pm.response.json().error.details.find((item) => item.field === 'pageSize');",
+									"  pm.expect(detail.message).to.eql('Page size must be at most 100.');",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/accounts/{{checkingId}}/transactions?pageSize=101",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"accounts",
+								"{{checkingId}}",
+								"transactions"
+							],
+							"query": [
+								{
+									"key": "pageSize",
+									"value": "101"
+								}
+							]
+						},
+						"description": "Expected: 400, \"Page size must be at most 100.\""
+					},
+					"response": []
+				},
+				{
+					"name": "History - another customer's transactions are refused",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 403', () => {",
+									"  pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.test('Error code is FORBIDDEN', () => {",
+									"  const error = pm.response.json().error;",
+									"  pm.expect(error.code).to.eql('FORBIDDEN');",
+									"  ",
+									"});"
+								]
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableCookies": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_banking}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bank/accounts/acct_bob_chk/transactions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bank",
+								"accounts",
+								"acct_bob_chk",
+								"transactions"
+							]
+						},
+						"description": "Authorization test. Expected: 403, FORBIDDEN."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"/*",
+					" * DYNAMIC TOKEN HANDLING (runs before every request in this collection)",
+					" *",
+					" * A request that needs a session sends the header",
+					" *     Authorization: Bearer {{token_<module>}}",
+					" * where <module> is ecommerce, banking, travel or admin. Each sign-in opens one module, so",
+					" * there is one token per module.",
+					" *",
+					" * This script looks at that header. If the token for that module is missing, or expires within",
+					" * a minute, it signs in first with pm.sendRequest, using the credentials from the environment",
+					" * (testUsername/testPassword, or adminUsername/adminPassword for admin), and saves the token",
+					" * and its expiry time as collection variables. Postman waits for the sign-in to finish before",
+					" * it sends the request itself.",
+					" *",
+					" * Requests in this collection have Settings > \"Disable cookie jar\" on, so they authenticate with",
+					" * the Bearer token only. pm.sendRequest still uses the cookie jar, so after each sign-in this",
+					" * script clears the session cookie it received.",
+					" */",
+					"const header = pm.request.headers.get('Authorization') || '';",
+					"const wanted = header.match(/\\{\\{token_(ecommerce|banking|travel|admin)\\}\\}/);",
+					"",
+					"if (wanted) {",
+					"  const module = wanted[1];",
+					"  const tokenKey = `token_${module}`;",
+					"  const expiresKey = `token_${module}_expires`;",
+					"  const expiresAt = Number(pm.collectionVariables.get(expiresKey) || 0);",
+					"  const stillValid = pm.collectionVariables.get(tokenKey) && Date.now() < expiresAt - 60 * 1000;",
+					"",
+					"  if (!stillValid) {",
+					"    const admin = module === 'admin';",
+					"    const email = pm.environment.get(admin ? 'adminUsername' : 'testUsername');",
+					"    const password = pm.environment.get(admin ? 'adminPassword' : 'testPassword');",
+					"    if (!email || !password) {",
+					"      throw new Error(",
+					"        `Set ${admin ? 'adminUsername and adminPassword' : 'testUsername and testPassword'} in the selected environment (Current value).`,",
+					"      );",
+					"    }",
+					"",
+					"    pm.sendRequest(",
+					"      {",
+					"        url: `${pm.environment.get('baseUrl')}/auth/login`,",
+					"        method: 'POST',",
+					"        header: { 'Content-Type': 'application/json' },",
+					"        body: { mode: 'raw', raw: JSON.stringify({ email, password, module }) },",
+					"      },",
+					"      (error, response) => {",
+					"        if (error || response.code !== 200) {",
+					"          throw new Error(`Automatic sign-in to ${module} failed: ${error ? error.message : `${response.code} ${response.text()}`}`);",
+					"        }",
+					"        const { token, expiresIn } = response.json().data;",
+					"        pm.collectionVariables.set(tokenKey, token);",
+					"        pm.collectionVariables.set(expiresKey, String(Date.now() + expiresIn * 1000));",
+					"",
+					"        // The sign-in also stored the app's session cookie. If it stayed, the next automatic",
+					"        // sign-in would send it, and the app would end that session (and so this token).",
+					"        pm.cookies.jar().clear(pm.environment.get('baseUrl'), (clearError) => {",
+					"          if (clearError) {",
+					"            console.warn(",
+					"              'Could not clear the session cookie. In Postman, open Cookies > Domains Allowlist and add the API domain ' +",
+					"                '(for example quality-lab-jb.vercel.app), or tokens of other modules may stop working.',",
+					"            );",
+					"          }",
+					"        });",
+					"      },",
+					"    );",
+					"  }",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"/*",
+					" * CHECKS FOR EVERY RESPONSE (run after every request in this collection)",
+					" * Each request's own Tests tab adds the checks for that request.",
+					" */",
+					"pm.test('[every response] no server error (status below 500)', () => {",
+					"  pm.expect(pm.response.code).to.be.below(500);",
+					"});",
+					"",
+					"pm.test('[every response] answered within 20 seconds', () => {",
+					"  pm.expect(pm.response.responseTime).to.be.below(20000);",
+					"});",
+					"",
+					"pm.test('[every response] carries an x-request-id header', () => {",
+					"  pm.response.to.have.header('x-request-id');",
+					"});",
+					"",
+					"if (pm.response.code !== 204) {",
+					"  pm.test('[every response] body is JSON', () => {",
+					"    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+					"  });",
+					"}",
+					"",
+					"// Every error uses the same shape: { error: { code, message, details?, requestId } }.",
+					"if (pm.response.code >= 400) {",
+					"  pm.test('[every response] error body matches the ErrorResponse schema', () => {",
+					"    const schemas = JSON.parse(pm.collectionVariables.get('schemas'));",
+					"    pm.response.to.have.jsonSchema(schemas.ErrorResponse);",
+					"  });",
+					"}"
+				]
+			}
+		}
+	],
+	"protocolProfileBehavior": {
+		"disableCookies": true
+	},
+	"variable": [
+		{
+			"key": "schemas",
+			"value": "{\"User_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"email\":{\"type\":\"string\"},\"firstName\":{\"type\":\"string\"},\"lastName\":{\"type\":\"string\"},\"role\":{\"type\":\"string\",\"enum\":[\"CUSTOMER\",\"ADMIN\"]},\"status\":{\"type\":\"string\",\"enum\":[\"ACTIVE\",\"DISABLED\"]},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"email\",\"firstName\",\"lastName\",\"role\",\"status\",\"createdAt\"]}}},\"LoginResult_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"token\":{\"type\":\"string\"},\"tokenType\":{\"type\":\"string\"},\"expiresIn\":{\"type\":\"integer\"},\"module\":{\"type\":\"string\",\"enum\":[\"ecommerce\",\"banking\",\"travel\",\"admin\"]},\"user\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"email\":{\"type\":\"string\"},\"firstName\":{\"type\":\"string\"},\"lastName\":{\"type\":\"string\"},\"role\":{\"type\":\"string\",\"enum\":[\"CUSTOMER\",\"ADMIN\"]},\"status\":{\"type\":\"string\",\"enum\":[\"ACTIVE\",\"DISABLED\"]},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"email\",\"firstName\",\"lastName\",\"role\",\"status\",\"createdAt\"]}},\"required\":[\"token\",\"tokenType\",\"expiresIn\",\"module\",\"user\"]}}},\"Product_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"category\":{\"type\":\"string\"},\"brand\":{\"type\":\"string\"},\"priceCents\":{\"type\":\"integer\"},\"listPriceCents\":{\"type\":[\"integer\",\"null\"]},\"onSale\":{\"type\":\"boolean\"},\"discountPercent\":{\"type\":[\"integer\",\"null\"]},\"stock\":{\"type\":\"integer\"},\"inStock\":{\"type\":\"boolean\"},\"rating\":{\"type\":\"number\"},\"imageUrl\":{\"type\":[\"string\",\"null\"]},\"isActive\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"updatedAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"sku\",\"name\",\"description\",\"category\",\"brand\",\"priceCents\",\"listPriceCents\",\"onSale\",\"discountPercent\",\"stock\",\"inStock\",\"rating\",\"imageUrl\",\"isActive\",\"createdAt\",\"updatedAt\"]}}},\"Product_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"category\":{\"type\":\"string\"},\"brand\":{\"type\":\"string\"},\"priceCents\":{\"type\":\"integer\"},\"listPriceCents\":{\"type\":[\"integer\",\"null\"]},\"onSale\":{\"type\":\"boolean\"},\"discountPercent\":{\"type\":[\"integer\",\"null\"]},\"stock\":{\"type\":\"integer\"},\"inStock\":{\"type\":\"boolean\"},\"rating\":{\"type\":\"number\"},\"imageUrl\":{\"type\":[\"string\",\"null\"]},\"isActive\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"updatedAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"sku\",\"name\",\"description\",\"category\",\"brand\",\"priceCents\",\"listPriceCents\",\"onSale\",\"discountPercent\",\"stock\",\"inStock\",\"rating\",\"imageUrl\",\"isActive\",\"createdAt\",\"updatedAt\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"Cart_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"productId\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"unitPriceCents\":{\"type\":\"integer\"},\"quantity\":{\"type\":\"integer\"},\"lineTotalCents\":{\"type\":\"integer\"},\"availableStock\":{\"type\":\"integer\"}},\"required\":[\"productId\",\"sku\",\"name\",\"unitPriceCents\",\"quantity\",\"lineTotalCents\",\"availableStock\"]}},\"itemCount\":{\"type\":\"integer\"},\"subtotalCents\":{\"type\":\"integer\"},\"taxCents\":{\"type\":\"integer\"},\"shippingCents\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"}},\"required\":[\"items\",\"itemCount\",\"subtotalCents\",\"taxCents\",\"shippingCents\",\"totalCents\"]}}},\"Order_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"orderNumber\":{\"type\":\"string\"},\"userId\":{\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"PAID\",\"SHIPPED\",\"DELIVERED\",\"CANCELLED\"]},\"paymentStatus\":{\"type\":\"string\",\"enum\":[\"CAPTURED\",\"REFUNDED\"]},\"subtotalCents\":{\"type\":\"integer\"},\"taxCents\":{\"type\":\"integer\"},\"shippingCents\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"},\"shipping\":{\"type\":\"object\",\"properties\":{\"fullName\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"postcode\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"}},\"required\":[\"fullName\",\"address\",\"city\",\"postcode\",\"country\"]},\"payment\":{\"type\":\"object\",\"properties\":{\"cardBrand\":{\"type\":\"string\"},\"cardLast4\":{\"type\":\"string\"}},\"required\":[\"cardBrand\",\"cardLast4\"]},\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"productId\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"unitPriceCents\":{\"type\":\"integer\"},\"quantity\":{\"type\":\"integer\"},\"lineTotalCents\":{\"type\":\"integer\"}},\"required\":[\"productId\",\"sku\",\"name\",\"unitPriceCents\",\"quantity\",\"lineTotalCents\"]}},\"canCancel\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"cancelledAt\":{\"type\":[\"string\",\"null\"],\"format\":\"date-time\"}},\"required\":[\"id\",\"orderNumber\",\"userId\",\"status\",\"paymentStatus\",\"subtotalCents\",\"taxCents\",\"shippingCents\",\"totalCents\",\"shipping\",\"payment\",\"items\",\"canCancel\",\"createdAt\",\"cancelledAt\"]}}},\"Order_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"orderNumber\":{\"type\":\"string\"},\"userId\":{\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"PAID\",\"SHIPPED\",\"DELIVERED\",\"CANCELLED\"]},\"paymentStatus\":{\"type\":\"string\",\"enum\":[\"CAPTURED\",\"REFUNDED\"]},\"subtotalCents\":{\"type\":\"integer\"},\"taxCents\":{\"type\":\"integer\"},\"shippingCents\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"},\"shipping\":{\"type\":\"object\",\"properties\":{\"fullName\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"postcode\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"}},\"required\":[\"fullName\",\"address\",\"city\",\"postcode\",\"country\"]},\"payment\":{\"type\":\"object\",\"properties\":{\"cardBrand\":{\"type\":\"string\"},\"cardLast4\":{\"type\":\"string\"}},\"required\":[\"cardBrand\",\"cardLast4\"]},\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"productId\":{\"type\":\"string\"},\"sku\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"unitPriceCents\":{\"type\":\"integer\"},\"quantity\":{\"type\":\"integer\"},\"lineTotalCents\":{\"type\":\"integer\"}},\"required\":[\"productId\",\"sku\",\"name\",\"unitPriceCents\",\"quantity\",\"lineTotalCents\"]}},\"canCancel\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"cancelledAt\":{\"type\":[\"string\",\"null\"],\"format\":\"date-time\"}},\"required\":[\"id\",\"orderNumber\",\"userId\",\"status\",\"paymentStatus\",\"subtotalCents\",\"taxCents\",\"shippingCents\",\"totalCents\",\"shipping\",\"payment\",\"items\",\"canCancel\",\"createdAt\",\"cancelledAt\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"BankAccount_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"accountNumber\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"CHECKING\",\"SAVINGS\",\"TIME_DEPOSIT\"]},\"product\":{\"type\":[\"string\",\"null\"],\"enum\":[\"STARTER_SAVINGS\",\"EVERYDAY_CHECKING\",\"TIME_DEPOSIT\",null]},\"productName\":{\"type\":[\"string\",\"null\"]},\"status\":{\"type\":\"string\",\"enum\":[\"ACTIVE\",\"FROZEN\"]},\"currency\":{\"type\":\"string\"},\"balanceCents\":{\"type\":\"integer\"},\"termMonths\":{\"type\":[\"integer\",\"null\"]},\"interestRateBps\":{\"type\":[\"integer\",\"null\"]},\"maturityDate\":{\"type\":[\"string\",\"null\"],\"format\":\"date\"},\"locked\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"accountNumber\",\"name\",\"type\",\"product\",\"productName\",\"status\",\"currency\",\"balanceCents\",\"termMonths\",\"interestRateBps\",\"maturityDate\",\"locked\",\"createdAt\"]}}},\"BankAccount_list\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"accountNumber\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"CHECKING\",\"SAVINGS\",\"TIME_DEPOSIT\"]},\"product\":{\"type\":[\"string\",\"null\"],\"enum\":[\"STARTER_SAVINGS\",\"EVERYDAY_CHECKING\",\"TIME_DEPOSIT\",null]},\"productName\":{\"type\":[\"string\",\"null\"]},\"status\":{\"type\":\"string\",\"enum\":[\"ACTIVE\",\"FROZEN\"]},\"currency\":{\"type\":\"string\"},\"balanceCents\":{\"type\":\"integer\"},\"termMonths\":{\"type\":[\"integer\",\"null\"]},\"interestRateBps\":{\"type\":[\"integer\",\"null\"]},\"maturityDate\":{\"type\":[\"string\",\"null\"],\"format\":\"date\"},\"locked\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"accountNumber\",\"name\",\"type\",\"product\",\"productName\",\"status\",\"currency\",\"balanceCents\",\"termMonths\",\"interestRateBps\",\"maturityDate\",\"locked\",\"createdAt\"]}}}},\"BankTransaction_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"reference\":{\"type\":\"string\"},\"accountId\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"DEPOSIT\",\"WITHDRAWAL\",\"TRANSFER_IN\",\"TRANSFER_OUT\",\"LOAN_DISBURSEMENT\",\"LOAN_PAYMENT\"]},\"amountCents\":{\"type\":\"integer\"},\"balanceAfterCents\":{\"type\":\"integer\"},\"counterparty\":{\"type\":[\"string\",\"null\"]},\"description\":{\"type\":[\"string\",\"null\"]},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"reference\",\"accountId\",\"type\",\"amountCents\",\"balanceAfterCents\",\"counterparty\",\"description\",\"createdAt\"]}}},\"BankTransaction_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"reference\":{\"type\":\"string\"},\"accountId\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"DEPOSIT\",\"WITHDRAWAL\",\"TRANSFER_IN\",\"TRANSFER_OUT\",\"LOAN_DISBURSEMENT\",\"LOAN_PAYMENT\"]},\"amountCents\":{\"type\":\"integer\"},\"balanceAfterCents\":{\"type\":\"integer\"},\"counterparty\":{\"type\":[\"string\",\"null\"]},\"description\":{\"type\":[\"string\",\"null\"]},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"}},\"required\":[\"id\",\"reference\",\"accountId\",\"type\",\"amountCents\",\"balanceAfterCents\",\"counterparty\",\"description\",\"createdAt\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"HotelSummary_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"starRating\":{\"type\":\"integer\"},\"amenities\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"imageUrl\":{\"type\":[\"string\",\"null\"]},\"fromPriceCents\":{\"type\":\"integer\"},\"matchingRooms\":{\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"city\",\"country\",\"address\",\"description\",\"starRating\",\"amenities\",\"imageUrl\",\"fromPriceCents\",\"matchingRooms\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"HotelDetail_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"allOf\":[{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"starRating\":{\"type\":\"integer\"},\"amenities\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"imageUrl\":{\"type\":[\"string\",\"null\"]},\"fromPriceCents\":{\"type\":\"integer\"},\"matchingRooms\":{\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"city\",\"country\",\"address\",\"description\",\"starRating\",\"amenities\",\"imageUrl\"]},{\"type\":\"object\",\"properties\":{\"rooms\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"hotelId\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"STANDARD\",\"DELUXE\",\"SUITE\",\"FAMILY\"]},\"description\":{\"type\":\"string\"},\"maxGuests\":{\"type\":\"integer\"},\"pricePerNightCents\":{\"type\":\"integer\"},\"totalRooms\":{\"type\":\"integer\"},\"availableRooms\":{\"type\":[\"integer\",\"null\"]},\"available\":{\"type\":[\"boolean\",\"null\"]},\"nights\":{\"type\":[\"integer\",\"null\"]},\"stayTotalCents\":{\"type\":[\"integer\",\"null\"]}},\"required\":[\"id\",\"hotelId\",\"name\",\"type\",\"description\",\"maxGuests\",\"pricePerNightCents\",\"totalRooms\",\"availableRooms\",\"available\",\"nights\",\"stayTotalCents\"]}}},\"required\":[\"rooms\"]}]}}},\"Room_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"hotelId\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"STANDARD\",\"DELUXE\",\"SUITE\",\"FAMILY\"]},\"description\":{\"type\":\"string\"},\"maxGuests\":{\"type\":\"integer\"},\"pricePerNightCents\":{\"type\":\"integer\"},\"totalRooms\":{\"type\":\"integer\"},\"availableRooms\":{\"type\":[\"integer\",\"null\"]},\"available\":{\"type\":[\"boolean\",\"null\"]},\"nights\":{\"type\":[\"integer\",\"null\"]},\"stayTotalCents\":{\"type\":[\"integer\",\"null\"]}},\"required\":[\"id\",\"hotelId\",\"name\",\"type\",\"description\",\"maxGuests\",\"pricePerNightCents\",\"totalRooms\",\"availableRooms\",\"available\",\"nights\",\"stayTotalCents\"]}}},\"Booking_one\":{\"type\":\"object\",\"required\":[\"data\"],\"properties\":{\"data\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"bookingNumber\":{\"type\":\"string\"},\"userId\":{\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"CONFIRMED\",\"CANCELLED\"]},\"checkIn\":{\"type\":\"string\",\"format\":\"date\"},\"checkOut\":{\"type\":\"string\",\"format\":\"date\"},\"guests\":{\"type\":\"integer\"},\"nights\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"},\"room\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\"},\"pricePerNightCents\":{\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"type\",\"pricePerNightCents\"]},\"hotel\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"city\",\"country\"]},\"canCancel\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"cancelledAt\":{\"type\":[\"string\",\"null\"],\"format\":\"date-time\"}},\"required\":[\"id\",\"bookingNumber\",\"userId\",\"status\",\"checkIn\",\"checkOut\",\"guests\",\"nights\",\"totalCents\",\"room\",\"hotel\",\"canCancel\",\"createdAt\",\"cancelledAt\"]}}},\"Booking_page\":{\"type\":\"object\",\"required\":[\"data\",\"meta\"],\"properties\":{\"data\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"bookingNumber\":{\"type\":\"string\"},\"userId\":{\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"CONFIRMED\",\"CANCELLED\"]},\"checkIn\":{\"type\":\"string\",\"format\":\"date\"},\"checkOut\":{\"type\":\"string\",\"format\":\"date\"},\"guests\":{\"type\":\"integer\"},\"nights\":{\"type\":\"integer\"},\"totalCents\":{\"type\":\"integer\"},\"room\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\"},\"pricePerNightCents\":{\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"type\",\"pricePerNightCents\"]},\"hotel\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"city\":{\"type\":\"string\"},\"country\":{\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"city\",\"country\"]},\"canCancel\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\",\"format\":\"date-time\"},\"cancelledAt\":{\"type\":[\"string\",\"null\"],\"format\":\"date-time\"}},\"required\":[\"id\",\"bookingNumber\",\"userId\",\"status\",\"checkIn\",\"checkOut\",\"guests\",\"nights\",\"totalCents\",\"room\",\"hotel\",\"canCancel\",\"createdAt\",\"cancelledAt\"]}},\"meta\":{\"type\":\"object\",\"properties\":{\"page\":{\"type\":\"integer\"},\"pageSize\":{\"type\":\"integer\"},\"totalItems\":{\"type\":\"integer\"},\"totalPages\":{\"type\":\"integer\"},\"hasNext\":{\"type\":\"boolean\"},\"hasPrevious\":{\"type\":\"boolean\"}},\"required\":[\"page\",\"pageSize\",\"totalItems\",\"totalPages\",\"hasNext\",\"hasPrevious\"]}}},\"ErrorResponse\":{\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"object\",\"required\":[\"code\",\"message\",\"requestId\"],\"properties\":{\"code\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"},\"details\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"field\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"}},\"required\":[\"message\"]}},\"requestId\":{\"type\":\"string\",\"format\":\"uuid\"}}}}}}",
+			"type": "string",
+			"description": "JSON schemas built from the API OpenAPI document (npm run schemas). Tests read them."
+		},
+		{
+			"key": "token_ecommerce",
+			"value": "",
+			"type": "string",
+			"description": "Filled automatically before the first request that needs it."
+		},
+		{
+			"key": "token_ecommerce_expires",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_banking",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_banking_expires",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_travel",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_travel_expires",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_admin",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_admin_expires",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "checkingId",
+			"value": "",
+			"type": "string",
+			"description": "Set by \"Accounts - list my accounts\"."
+		},
+		{
+			"key": "checkingNumber",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "checkingBalance",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "savingsId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "savingsNumber",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "savingsBalance",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "amount",
+			"value": "",
+			"type": "string",
+			"description": "A small random amount, set before each money movement."
+		},
+		{
+			"key": "idempotencyKey",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "tooMuch",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "depositId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "depositReference",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "transferReference",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
