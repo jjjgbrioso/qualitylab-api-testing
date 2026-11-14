@@ -81,6 +81,14 @@ The 2 failures are the two **genuine application defects** in [DEFECTS.md](DEFEC
 
 Problems in the tests themselves were fixed while building them. For example, the session cookie set at sign-in was being sent with later requests and silently authenticating them; the cookie jar is now disabled.
 
+### Screenshots (Postman app)
+
+| | |
+| --- | --- |
+| The collections in Postman, with the E-commerce collection's description | ![Collections](docs/screenshots/01-collections.png) |
+| A request run by hand: `POST /auth/login`, 200 OK, 10 of 10 tests passed (the response body with the token is cropped out) | ![Login request](docs/screenshots/02-login-request.png) |
+| The Travel collection in the Collection Runner: 272 tests, 270 passed. The 2 failures are the known defects DEFECT-001 and DEFECT-002 | ![Travel run](docs/screenshots/03-travel-run-known-defects.png) |
+
 ## Installation
 
 Requirements: Node.js 20.12 or newer (`node -v`). The Postman app is optional; you only need it to view or edit the collections.
