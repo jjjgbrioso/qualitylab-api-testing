@@ -40,16 +40,24 @@ Why the Current value only:
 
 Never put real credentials in the Initial value, and never share a workspace that holds them. The files in the repository have empty values on purpose.
 
-## 4. Allow the scripts to clear one cookie (one-time setup)
+## 4. Optional: allow the scripts to clear one cookie
 
-The collections sign in for you (step 6). Each sign-in also receives the app's session cookie, and the script clears it so it can't end your other sessions. Postman only lets scripts touch cookies for domains you allow:
+The collections sign in for you (step 6). Each sign-in also receives the app's session cookie. A later sign-in that sends that cookie ends the earlier session, because the app allows one session per browser.
 
-1. Click **Cookies** (under the **Send** button of any request).
+The scripts cope with this on their own:
+- When they sign in to another module, they forget the previous automatic sign-in's token.
+- Any module token the API refuses with `401` is thrown away, so the next request signs in again.
+
+This works whether or not Postman lets the scripts touch cookies.
+
+To save a few extra sign-ins, you can let the scripts remove the cookie after each sign-in:
+
+1. Click **Cookies**, on the right of the row with Params, Authorization, Headers, Body, Scripts and Settings.
 2. Click **Domains Allowlist**.
 3. Add `quality-lab-jb.vercel.app`: the domain only, with no `https://`. Add `localhost` too if you test a local copy.
 4. Close the window.
 
-Without this, the Postman Console (bottom left) shows a warning, and signing in to a second module can end the first module's session.
+**If you imported the collections before 15 November 2026,** some runs failed with `401` on module tokens. Re-import the collections (Import > choose the files > **Replace**) to get the self-healing scripts. Then, in each collection's **Variables** tab, clear the Current value of the `token_…` variables, or use **Reset all**.
 
 ## 5. Send your first request
 
@@ -73,7 +81,8 @@ Each sign-in opens one module, so each module has its own token.
    - reads the request's `Authorization` header to see which module it needs (`banking` here);
    - if there's no token for that module yet, or it expires within a minute, signs in with `pm.sendRequest` using your environment's credentials;
    - saves the token as the collection variable `token_banking`, with its expiry time;
-   - clears the session cookie the sign-in returned (see step 4).
+   - forgets the previous automatic sign-in's token, and tries to clear the session cookie the sign-in returned (see step 4);
+   - and the collection's **Post-response** script forgets any module token the API refuses with `401`.
 4. Send the request. Then open the collection's **Variables** tab: `token_banking` now has a Current value.
 
 Every request in these collections also has **Settings → Disable cookie jar** switched on, so it authenticates with the Bearer token only.

@@ -72,7 +72,7 @@ The collection-level script adds checks to **every** response:
 
 ## Results
 
-Latest full run against the deployed site (14 November 2026): **9 collection runs, 249 requests, 1,602 checks: 1,600 passed, 2 failed.**
+Latest full run against the deployed site (14 November 2026, after the self-healing token fix): **9 collection runs, 255 requests, 1,602 checks: 1,600 passed, 2 failed.**
 
 The 2 failures are the two **genuine application defects** in [DEFECTS.md](DEFECTS.md). Their tests are in the Travel collection's **Known defects** folder and will keep failing until the app is fixed:
 
@@ -185,7 +185,10 @@ api-testing/
 ### How the collections work
 
 - **Dynamic token handling.** Each collection's Pre-request script runs before every request. If the request's `Authorization` header is `Bearer {{token_<module>}}`, the script makes sure there is a valid token for that module, signing in with `pm.sendRequest` when needed, and caches it until a minute before it expires.
-- **No cookies.** Every request has **Disable cookie jar** on, so it authenticates with its Bearer token only. After each automatic sign-in, the script clears the session cookie the app sets. In the Postman app this needs the API domain on the cookie allowlist; see the guide.
+- **No cookies, self-healing tokens.** Every request has **Disable cookie jar** on, so it authenticates with its Bearer token only. `pm.sendRequest` still uses the cookie jar, and the app ends a session when a later sign-in sends its cookie. So the scripts:
+  - forget the previous automatic sign-in's token whenever they sign in to another module;
+  - forget any module token the API refuses with `401`;
+  - try to clear the cookie after each sign-in. In the Postman app that last part needs the domain on the cookie allowlist, but the tests pass without it.
 - **Variables:**
   - *Environment variables:* the base URL and credentials.
   - *Collection variables:* tokens, the schemas, and values saved by one request for the next (`createdProductId`, `orderId`, `bookingId`, balances).
@@ -198,7 +201,7 @@ api-testing/
 | --- | --- |
 | `TEST_USERNAME, … not set` | Create `.env` from `.env.example`, or set the variables in your shell. |
 | `Automatic sign-in to … failed: 401` | Wrong credentials, or not the seeded customer or admin. |
-| Many `401` errors in the Postman app | Add the API domain to **Cookies → Domains Allowlist** (see the guide, step 4). |
+| Many `401` errors in the Postman app | Re-import the collections (**Replace**) and reset the `token_…` collection variables; see the guide, step 4. Collections imported before 15 November 2026 did not renew refused tokens. |
 | Balance or cart checks fail unexpectedly | Another suite (Selenium, Playwright, or a second Newman run) is using the same customer at the same time. Run one at a time. |
 | `409 DUPLICATE_TRANSACTION` on "one centavo" | Two runs within 30 seconds sent the same amount. Run again. |
 | Schema failures after an app change | Run `npm run schemas` to rebuild the schemas from the API's current OpenAPI document. |
