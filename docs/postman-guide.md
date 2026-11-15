@@ -16,7 +16,7 @@ The free plan is enough for this guide. Postman's own documentation says manual 
 ## 2. Import the collections and environments
 
 1. In Postman, click **Import** (top left).
-2. Drag in, or choose, these files from `QualityLab/api-testing/`:
+2. Drag in, or choose, these files from this repository (`qualitylab-api-testing/`):
    - `collections/01-authentication.postman_collection.json`
    - `collections/02-ecommerce.postman_collection.json`
    - `collections/03-banking.postman_collection.json`

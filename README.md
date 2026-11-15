@@ -1,5 +1,8 @@
 # QualityLab: API testing with Postman and Newman
 
+> Part of **[QualityLab](https://github.com/jjjgbrioso/QualityLab)**, a QA portfolio project. The app under test is live at https://quality-lab-jb.vercel.app.
+> Test projects: [Selenium Java](https://github.com/jjjgbrioso/qualitylab-selenium-java) · [Playwright TypeScript](https://github.com/jjjgbrioso/qualitylab-playwright-typescript) · [Postman + Newman](https://github.com/jjjgbrioso/qualitylab-api-testing) · [JMeter](https://github.com/jjjgbrioso/qualitylab-jmeter)
+
 Postman collections for the QualityLab REST API (`/api/v1`), run from the command line with Newman, with HTML reports. They test the deployed site by default, or a copy on your PC.
 
 The project is independent of the web application and of the Selenium and Playwright frameworks. It only calls the public REST API.
