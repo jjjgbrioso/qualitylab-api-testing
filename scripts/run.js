@@ -168,6 +168,9 @@ function escape(text) {
   return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/** Tests named "[DEFECT-nnn] …" (Travel › Known defects) fail on purpose until the app is fixed; see DEFECTS.md. */
+const isKnownDefect = (failure) => /^\[DEFECT-\d+\]/.test(failure.request);
+
 function writeIndex(results, environment, startedAt) {
   const totals = results.reduce(
     (sum, run) => ({
@@ -180,7 +183,9 @@ function writeIndex(results, environment, startedAt) {
   );
   const passed = totals.assertions - totals.failed;
   const rate = totals.assertions ? Math.round((passed / totals.assertions) * 1000) / 10 : 0;
-  const status = totals.failed === 0 && totals.failedRequests === 0 ? 'passed' : 'failed';
+  // A run passes when its only failures are the known defects; any other failure fails it.
+  const known = results.flatMap((run) => run.failures).filter(isKnownDefect).length;
+  const status = totals.failed === known && totals.failedRequests === 0 ? 'passed' : 'failed';
   const duration = Math.round((Date.now() - startedAt) / 1000);
   const baseUrl = process.env.API_BASE_URL || JSON.parse(fs.readFileSync(path.join(ROOT, 'environments', `${environment}.postman_environment.json`), 'utf8')).values.find((v) => v.key === 'baseUrl').value;
 
@@ -220,7 +225,7 @@ footer{margin-top:24px;color:var(--muted);font-size:12px}
 </style></head><body><main>
 <h1>QualityLab API test run</h1>
 <div class="meta"><b>${escape(new Date(startedAt).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }))}</b> &middot; ${escape(environment.toUpperCase())} &middot; ${escape(baseUrl)} &middot; Newman &middot; ${duration}s</div>
-<span class="status ${status}">Run ${status}</span>
+<span class="status ${status}">Run ${status}${known ? ` &middot; ${known} known defect${known === 1 ? '' : 's'}` : ''}</span>
 <div class="tiles">
 <div class="tile"><div class="v">${results.length}</div><div class="l">Collection runs</div></div>
 <div class="tile"><div class="v">${totals.requests}</div><div class="l">Requests</div></div>
@@ -296,7 +301,8 @@ async function main() {
 
   const failed = results.reduce((sum, run) => sum + run.assertions.failed, 0);
   const checks = results.reduce((sum, run) => sum + run.assertions.total, 0);
-  console.log(`\nRun ${status}: ${checks - failed} of ${checks} checks passed in ${results.length} collection runs. Summary: ${path.relative(process.cwd(), INDEX)}`);
+  const known = results.flatMap((run) => run.failures).filter(isKnownDefect).length;
+  console.log(`\nRun ${status}: ${checks - failed} of ${checks} checks passed in ${results.length} collection runs${known ? ` (${known === failed ? `the ${known} failed checks are` : `${known} of the failed checks are`} known defects, see DEFECTS.md)` : ''}. Summary: ${path.relative(process.cwd(), INDEX)}`);
   if (shouldOpen(status)) openReport();
   process.exitCode = status === 'passed' ? 0 : 1;
 }

@@ -82,6 +82,12 @@ The 2 failures are the two **genuine application defects** in [DEFECTS.md](DEFEC
 - **DEFECT-001:** room availability ignores the number of guests.
 - **DEFECT-002:** hotel details leave out two fields the API documentation promises.
 
+Because these two are expected, `npm test` reports a run as **passed** when its only failures are tests named `[DEFECT-…]`. They still appear in the summary and the Newman reports. Any other failure fails the run.
+
+### Continuous integration
+
+GitHub Actions ([`.github/workflows/api-tests.yml`](.github/workflows/api-tests.yml)) runs the full suite on every pull request and push to `main`. It builds a throwaway copy of QualityLab with a fresh PostgreSQL database on GitHub's machine, starts it on port 3100 (the LOCAL target) and signs in with the app's seed test accounts, so it never touches the live site. The reports are saved with each run as the `newman-reports` artifact.
+
 Problems in the tests themselves were fixed while building them. For example, the session cookie set at sign-in was being sent with later requests and silently authenticating them; the cookie jar is now disabled.
 
 ### Screenshots (Postman app)
